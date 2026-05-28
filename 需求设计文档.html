@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>粮库仓储多智能体系统 — 需求设计文档</title>
+<style>
+  :root {
+    --primary: #1a5c3a;
+    --primary-light: #2d8a56;
+    --accent: #d4a017;
+    --bg: #f8f9f5;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-secondary: #555;
+    --border: #e0e4e0;
+    --code-bg: #f0f2ed;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.8;
+    font-size: 15px;
+  }
+
+  /* ── Header ── */
+  .hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: #fff;
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "🌾";
+    position: absolute;
+    right: 40px;
+    bottom: -10px;
+    font-size: 120px;
+    opacity: 0.12;
+  }
+  .hero h1 { font-size: 32px; font-weight: 700; letter-spacing: 1px; }
+  .hero .subtitle {
+    margin-top: 10px;
+    font-size: 16px;
+    opacity: 0.85;
+    font-weight: 400;
+  }
+  .hero .meta {
+    margin-top: 18px;
+    font-size: 13px;
+    opacity: 0.7;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-size: 13px;
+    margin: 6px 4px;
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 28px 32px;
+    margin: 30px auto;
+    max-width: 1000px;
+  }
+  .toc h2 {
+    font-size: 18px;
+    color: var(--primary);
+    margin-bottom: 14px;
+    border: none;
+    padding: 0;
+  }
+  .toc ol {
+    columns: 2;
+    column-gap: 32px;
+    list-style: none;
+    counter-reset: toc;
+  }
+  .toc li {
+    counter-increment: toc;
+    padding: 4px 0;
+    break-inside: avoid;
+  }
+  .toc li::before {
+    content: counter(toc) ".";
+    color: var(--primary-light);
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .toc a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .toc a:hover { color: var(--primary-light); }
+
+  /* ── Content ── */
+  .content {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 60px;
+  }
+
+  /* Headings */
+  h2 {
+    font-size: 24px;
+    color: var(--primary);
+    border-bottom: 3px solid var(--primary);
+    padding-bottom: 8px;
+    margin: 48px 0 20px;
+  }
+  h3 {
+    font-size: 19px;
+    color: var(--primary-light);
+    margin: 32px 0 14px;
+    padding-left: 12px;
+    border-left: 4px solid var(--accent);
+  }
+  h4 {
+    font-size: 16px;
+    color: var(--text);
+    margin: 24px 0 10px;
+  }
+
+  p { margin: 10px 0; }
+
+  /* Lists */
+  ul, ol { margin: 8px 0 8px 24px; }
+  li { margin: 4px 0; }
+
+  /* Strong */
+  strong { color: var(--primary); }
+
+  /* Code */
+  code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    color: #c7254e;
+  }
+  pre {
+    background: #1e2a3a;
+    color: #e6edf3;
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 14px 0;
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  thead {
+    background: var(--primary);
+    color: #fff;
+  }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:nth-child(even) { background: #fafbf8; }
+  tr:hover { background: #eef4ed; }
+
+  /* Blockquotes */
+  blockquote {
+    border-left: 4px solid var(--accent);
+    background: #fdf9ed;
+    padding: 12px 18px;
+    margin: 14px 0;
+    border-radius: 0 8px 8px 0;
+    color: #5a4a1a;
+  }
+  blockquote p { margin: 0; }
+
+  /* Horizontal rule */
+  hr {
+    border: none;
+    height: 1px;
+    background: var(--border);
+    margin: 32px 0;
+  }
+
+  /* JSON / example boxes */
+  .example-box {
+    background: #f5f7f2;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .example-box .label {
+    display: inline-block;
+    background: var(--primary);
+    color: #fff;
+    font-size: 11px;
+    font-family: -apple-system, "PingFang SC", sans-serif;
+    padding: 2px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 30px 0 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .hero { padding: 36px 20px 32px; }
+    .hero h1 { font-size: 22px; }
+    .hero::after { font-size: 70px; right: 10px; }
+    .container { padding: 0 14px; }
+    .toc { padding: 18px; }
+    .toc ol { columns: 1; }
+    table { font-size: 13px; }
+    th, td { padding: 7px 10px; }
+  }
+
+  /* ── Print ── */
+  @media print {
+    .hero { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    thead { background: var(--primary) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .content { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <h1>🌾 粮库仓储多智能体系统</h1>
+  <div class="subtitle">需求设计文档</div>
+  <div class="meta">
+    <span class="badge">AgentScope 编排</span>
+    <span class="badge">LangChain 子Agent</span>
+    <span class="badge">多智能体协同</span>
+  </div>
+</div>
+
+<!-- ═══ TOC ═══ -->
+<div class="toc">
+  <h2>📑 目录</h2>
+  <ol>
+    <li><a href="#s1">文档概述</a></li>
+    <li><a href="#s2">系统总体架构</a></li>
+    <li><a href="#s3">子智能体详细设计</a></li>
+    <li><a href="#s4">AgentScope 编排设计</a></li>
+    <li><a href="#s5">LangChain 子Agent 实现要点</a></li>
+    <li><a href="#s6">数据模型设计</a></li>
+    <li><a href="#s7">项目阶段规划</a></li>
+    <li><a href="#s8">风险与对策</a></li>
+    <li><a href="#s9">附录</a></li>
+  </ol>
+</div>
+
+<!-- ═══ CONTENT ═══ -->
+<div class="content">
+
+<!-- ─── 1 ─── -->
+<h2 id="s1">1. 文档概述</h2>
+
+<h3>1.1 项目背景</h3>
+<p>粮食仓储管理涉及粮情监测、出入库作业、通风/熏蒸/控温等智能作业、库存盘点、报表统计等诸多环节，人工管理效率低、响应慢、易出错。本项目旨在构建一套 <strong>多智能体（Multi-Agent）粮库仓储系统</strong>，以 <strong>AgentScope</strong> 为多智能体编排框架，各子智能体基于 <strong>LangChain</strong> 实现，实现对粮库全流程的智能化管理与协同。</p>
+
+<h3>1.2 项目目标</h3>
+<table>
+  <thead><tr><th>目标</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>粮情实时感知</td><td>自动采集温度、湿度、虫害、气体等数据，异常预警</td></tr>
+    <tr><td>作业智能调度</td><td>根据粮情自动规划通风/熏蒸/控温等作业方案</td></tr>
+    <tr><td>出入库全流程管理</td><td>从预约、质检、称重、入库/出库到结算的闭环</td></tr>
+    <tr><td>报表自动生成</td><td>日报、月报、年报及自定义报表的智能生成与分析</td></tr>
+    <tr><td>多智能体协同</td><td>各子智能体通过 AgentScope 实现消息传递与任务编排</td></tr>
+  </tbody>
+</table>
+
+<h3>1.3 技术栈</h3>
+<table>
+  <thead><tr><th>层级</th><th>技术选型</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>多智能体编排</td><td><strong>AgentScope</strong></td><td>负责 Agent 注册、消息路由、任务编排、共享记忆</td></tr>
+    <tr><td>子智能体框架</td><td><strong>LangChain</strong></td><td>每个子智能体内部的工具调用、Chain 编排、LLM 集成</td></tr>
+    <tr><td>LLM 底座</td><td>GPT-4 / 通义千问 / DeepSeek</td><td>根据部署环境选择</td></tr>
+    <tr><td>数据存储</td><td>PostgreSQL + InfluxDB + MinIO</td><td>结构化/时序/非结构化分离</td></tr>
+    <tr><td>消息中间件</td><td>RabbitMQ / Redis Stream</td><td>Agent 间异步消息</td></tr>
+    <tr><td>前端</td><td>React + Ant Design + ECharts</td><td>管理界面 + 可视化大屏</td></tr>
+    <tr><td>部署</td><td>Docker + Kubernetes</td><td>微服务化部署</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ─── 2 ─── -->
+<h2 id="s2">2. 系统总体架构</h2>
+
+<h3>2.1 架构分层</h3>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│                       用户界面层                             │
+│  Web管理端 (React + AntD)   大屏可视化    移动端 H5          │
+└────────────────────────┬────────────────────────────────────┘
+                         │ REST / WebSocket
+┌────────────────────────▼────────────────────────────────────┐
+│                  AgentScope 编排层                            │
+│                                                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ 粮情分析  │ │ 智能作业  │ │ 出入库   │ │ 报表分析  │       │
+│  │ Agent    │ │ Agent    │ │ Agent    │ │ Agent    │        │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘        │
+│       │             │             │             │             │
+│  ┌────▼─────────────▼─────────────▼─────────────▼─────┐      │
+│  │           AgentScope Orchestrator                   │      │
+│  │  (任务分发 / 消息路由 / 共享记忆 / 冲突消解)          │      │
+│  └─────────────────────────────────────────────────────┘      │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                  LangChain 子智能体层                         │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐                    │
+│  │ 粮情分析 Agent    │  │ 智能作业 Agent    │                   │
+│  │  ├ Chain: 分析链  │  │  ├ Chain: 决策链  │                   │
+│  │  ├ Tool: 数据查询 │  │  ├ Tool: 设备控制 │                   │
+│  │  └ Memory: 时序窗 │  │  └ Memory: 方案库 │                   │
+│  ├─────────────────┤  ├─────────────────┤                    │
+│  │ 出入库 Agent     │  │ 报表分析 Agent    │                   │
+│  │  ├ Chain: 流程链  │  │  ├ Chain: 分析链  │                   │
+│  │  ├ Tool: 业务查询 │  │  ├ Tool: SQL生成  │                   │
+│  │  └ Memory: 会话   │  │  └ Memory: 模板库 │                   │
+│  └─────────────────┘  └─────────────────┘                    │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│                      数据存储层                               │
+│  PostgreSQL(业务)  InfluxDB(时序)  MinIO(文件)  Redis(缓存)  │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<h3>2.2 AgentScope Orchestrator 核心职责</h3>
+<table>
+  <thead><tr><th>职责</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Agent 注册中心</strong></td><td>维护所有子 Agent 的元信息（名称、能力描述、当前状态）</td></tr>
+    <tr><td><strong>任务分解与分发</strong></td><td>将用户请求拆解为子任务，分派给对应 Agent</td></tr>
+    <tr><td><strong>消息路由</strong></td><td>Agent 之间的消息传递（同步/异步/广播）</td></tr>
+    <tr><td><strong>共享记忆</strong></td><td>全局上下文记忆（仓库状态、当前任务链、环境参数历史）</td></tr>
+    <tr><td><strong>冲突消解</strong></td><td>当多个 Agent 的决策冲突时，由 Orchestrator 裁决</td></tr>
+    <tr><td><strong>结果聚合</strong></td><td>将各 Agent 的输出合并为统一的用户响应</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ─── 3 ─── -->
+<h2 id="s3">3. 子智能体详细设计</h2>
+
+<h3>3.1 粮情分析 Agent（GrainConditionAgent）</h3>
+<h4>3.1.1 职责</h4>
+<p>实时采集并分析粮仓内的温度、湿度、水分、虫害密度、气体浓度（CO₂、PH₃）等参数，输出粮情状态评估、异常预警和发展趋势预测。</p>
+
+<h4>3.1.2 LangChain 实现结构</h4>
+<pre>
+GrainConditionAgent
+├── Chain: 粮情分析链
+│   ├── Step 1 — 数据采集 (Tool: 查询传感器当前值)
+│   ├── Step 2 — 时序分析 (Tool: 查询 InfluxDB 历史趋势)
+│   ├── Step 3 — 异常检测 (LLM: 判断是否超阈值)
+│   ├── Step 4 — 分级预警 (LLM: 正常/关注/警告/严重)
+│   └── Step 5 — 报告生成 (LLM: 自然语言总结)
+├── Tools:
+│   ├── get_sensor_latest(silo_id) → 当前读数
+│   ├── get_sensor_history(silo_id, time_range) → 时序数据
+│   ├── get_threshold_config(silo_id) → 预警阈值
+│   └── get_grain_type(silo_id) → 粮食品种 (不同品种阈值不同)
+└── Memory:
+    └── 窗口记忆: 保留最近 24h 的分析结论，用于趋势判断
+</pre>
+
+<h4>3.1.3 核心指标</h4>
+<table>
+  <thead><tr><th>指标</th><th>传感器类型</th><th>正常范围</th><th>预警阈值</th></tr></thead>
+  <tbody>
+    <tr><td>粮温</td><td>热电偶阵列</td><td>-10~30°C</td><td>&gt;35°C 或温升 &gt;1°C/天</td></tr>
+    <tr><td>仓温</td><td>温湿度计</td><td>-20~45°C</td><td>与粮温差 &gt;10°C</td></tr>
+    <tr><td>湿度</td><td>湿度传感器</td><td>40~70% RH</td><td>&gt;75%RH 持续 3 天</td></tr>
+    <tr><td>水分</td><td>水分传感器</td><td>存储安全水分以下</td><td>&gt;13.5%(稻谷) / &gt;14%(小麦)</td></tr>
+    <tr><td>虫害</td><td>诱捕器+AI识别</td><td>&lt;5头/kg</td><td>&gt;10头/kg</td></tr>
+    <tr><td>CO₂</td><td>气体传感器</td><td>&lt;500ppm</td><td>&gt;1000ppm</td></tr>
+  </tbody>
+</table>
+
+<h4>3.1.4 输出格式</h4>
+<div class="example-box"><span class="label">JSON</span>{
+  "silo_id": "S-01",
+  "timestamp": "2025-06-15T08:00:00Z",
+  "overall_status": "normal",
+  "metrics": {
+    "temperature": { "value": 22.3, "unit": "°C", "status": "normal", "trend": "stable" },
+    "humidity":    { "value": 65.0, "unit": "%RH", "status": "normal", "trend": "rising" },
+    "pest_density": { "value": 3, "unit": "head/kg", "status": "normal", "trend": "stable" }
+  },
+  "alerts": [],
+  "suggestion": "当前粮情正常，建议保持现有通风策略。"
+}</div>
+
+<h3>3.2 智能作业 Agent（IntelligentOperationAgent）</h3>
+<h4>3.2.1 职责</h4>
+<p>根据粮情分析结果和作业计划，自动生成通风、熏蒸、控温、翻仓等作业方案，协调设备执行，并监控作业过程。</p>
+
+<h4>3.2.2 LangChain 实现结构</h4>
+<pre>
+IntelligentOperationAgent
+├── Chain: 作业决策链
+│   ├── Step 1 — 读取粮情 (接收粮情 Agent 的输出)
+│   ├── Step 2 — 判定作业类型 (LLM: 需要哪种作业？)
+│   ├── Step 3 — 方案生成 (LLM: 参数计算 + Tool: 获取气象/电价)
+│   ├── Step 4 — 安全校验 (Tool: 检查设备状态 + LLM: 约束检查)
+│   ├── Step 5 — 审批请求 (通知管理员 / 自动执行规则)
+│   └── Step 6 — 执行监控 (Tool: 控制PLC + 回传执行状态)
+├── Sub-chains:
+│   ├── VentilationChain        — 自然通风 / 机械通风方案
+│   ├── FumigationChain         — PH₃ 熏蒸方案 (安全优先)
+│   ├── TemperatureControlChain — 空调/谷冷机控制
+│   └── TurningChain            — 翻仓作业计划
+├── Tools:
+│   ├── control_device(device_id, command, params) → 设备控制
+│   ├── get_weather_forecast() → 未来 72h 气象
+│   ├── get_electricity_price() → 峰谷电价
+│   └── get_device_status(device_id) → 设备在线/故障
+└── Memory:
+    └── 方案记忆: 保存历史作业方案及效果评估
+</pre>
+
+<h4>3.2.3 通风作业规则</h4>
+<table>
+  <thead><tr><th>条件</th><th>建议作业</th></tr></thead>
+  <tbody>
+    <tr><td>粮温 &gt; 目标温度 + 5°C，且大气温湿度适宜</td><td>机械通风</td></tr>
+    <tr><td>仓内湿度 &gt; 75%，且大气湿度 &lt; 60%</td><td>自然通风（排湿）</td></tr>
+    <tr><td>粮温分层明显，温差 &gt; 3°C</td><td>翻仓或通风均温</td></tr>
+    <tr><td>冬季大气干冷</td><td>机械通风降温（节能时段）</td></tr>
+    <tr><td>夏季高温高湿</td><td>暂停通风，开启空调控温</td></tr>
+  </tbody>
+</table>
+
+<h4>3.2.4 输出格式</h4>
+<div class="example-box"><span class="label">JSON</span>{
+  "operation_id": "OP-20250615-001",
+  "type": "ventilation",
+  "sub_type": "mechanical_ventilation",
+  "target_silos": ["S-01", "S-02"],
+  "plan": {
+    "start_time": "2025-06-15T22:00:00Z",
+    "duration_minutes": 120,
+    "fan_speed": "medium",
+    "airflow_direction": "bottom_up"
+  },
+  "safety_check": { "passed": true, "notes": "设备在线，满足通风条件" },
+  "approval_required": false,
+  "estimated_cost": { "kwh": 45, "cost_yuan": 31.5 }
+}</div>
+
+<h3>3.3 出入库 Agent（InOutBoundAgent）</h3>
+<h4>3.3.1 职责</h4>
+<p>管理粮食入库和出库的全流程，包括预约登记、扦样质检、称重计量、仓储分配、结算统计等环节。</p>
+
+<h4>3.3.2 LangChain 实现结构</h4>
+<pre>
+InOutBoundAgent
+├── Chain: 入库流程链
+│   ├── Step 1 — 预约登记 (Tool: 创建预约单)
+│   ├── Step 2 — 车辆排队 (Tool: 排队叫号)
+│   ├── Step 3 — 扦样质检 (Tool: 记录质检结果)
+│   ├── Step 4 — 称重毛重 (Tool: 读取地磅)
+│   ├── Step 5 — 卸粮入库 (Tool: 分配仓房 + 记录入仓)
+│   ├── Step 6 — 称重皮重 (Tool: 读取地磅)
+│   ├── Step 7 — 结算 (Tool: 计算净重 + 扣量)
+│   └── Step 8 — 生成凭证 (Tool: 打印入库单)
+├── Chain: 出库流程链
+│   ├── Step 1 — 出库指令接收
+│   ├── Step 2 — 车辆排队
+│   ├── Step 3 — 出仓装粮
+│   ├── Step 4 — 称重毛重
+│   ├── Step 5 — 结算
+│   └── Step 6 — 生成出门证
+├── Tools:
+│   ├── create_appointment(data) → 预约单号
+│   ├── record_inspection(inspection_data) → 质检记录
+│   ├── read_scale(device_id) → 当前重量
+│   ├── allocate_silo(grain_type, quantity) → 推荐仓房
+│   ├── get_silo_capacity(silo_id) → 当前库存/容量
+│   └── calculate_settlement(gross, tare, grade) → 结算结果
+└── Memory:
+    └── 会话记忆: 当前正在执行的出入库流程状态
+</pre>
+
+<h4>3.3.3 输出格式</h4>
+<div class="example-box"><span class="label">JSON</span>{
+  "transaction_id": "IN-20250615-023",
+  "type": "inbound",
+  "vehicle_plate": "豫A·12345",
+  "grain": { "type": "wheat", "grade": "二等", "origin": "河南新乡" },
+  "weight": { "gross": 32500, "tare": 8500, "net": 24000, "unit": "kg" },
+  "deduction": { "moisture_deduct": 120, "impurity_deduct": 60, "total_deduct": 180 },
+  "settlement": { "net_settled": 23820, "unit_price": 2.36, "total": 56215.2 },
+  "silo": "S-03",
+  "inspector": "张工",
+  "timestamp": "2025-06-15T14:30:00Z"
+}</div>
+
+<h3>3.4 报表分析 Agent（ReportAgent）</h3>
+<h4>3.4.1 职责</h4>
+<p>根据用户查询或定时任务，从各数据源汇总数据，生成粮库运营报表、粮情报表、出入库统计报表及数据分析报告。</p>
+
+<h4>3.4.2 LangChain 实现结构</h4>
+<pre>
+ReportAgent
+├── Chain: 报表生成链
+│   ├── Step 1 — 意图理解 (LLM: 解析用户自然语言查询)
+│   ├── Step 2 — SQL/Template 选择 (LLM: 确定报表类型 + 参数)
+│   ├── Step 3 — 数据查询 (Tool: 执行 SQL / 调用聚合 API)
+│   ├── Step 4 — 数据分析 (LLM: 分析趋势/异常/对比)
+│   └── Step 5 — 可视化生成 (Tool: 生成 ECharts 配置)
+├── Sub-chains:
+│   ├── DailyReportChain     — 日报数据聚合
+│   ├── MonthlyReportChain   — 月报同比环比
+│   ├── InventoryReportChain — 库存盘点（账实对比）
+│   └── CustomQueryChain     — 自由查询 + NL2SQL
+├── Tools:
+│   ├── query_database(sql) → 查询结果
+│   ├── generate_chart(data, chart_type) → ECharts JSON
+│   ├── export_pdf(content) → PDF 文件下载
+│   └── compare_period(current, previous) → 同比/环比结果
+└── Memory:
+    └── 模板记忆: 常用报表模板 + 用户偏好
+</pre>
+
+<h4>3.4.3 支持的报表类型</h4>
+<table>
+  <thead><tr><th>报表类型</th><th>周期</th><th>数据来源</th><th>主要指标</th></tr></thead>
+  <tbody>
+    <tr><td>粮情日报</td><td>每日</td><td>粮情 Agent</td><td>最高/最低/平均粮温、湿度、异常统计</td></tr>
+    <tr><td>出入库日报</td><td>每日</td><td>出入库 Agent</td><td>入库量/出库量/车次/等级分布</td></tr>
+    <tr><td>库存月报</td><td>每月</td><td>出入库 + 盘点</td><td>期末库存、月周转率、损耗统计</td></tr>
+    <tr><td>作业报告</td><td>按需</td><td>作业 Agent</td><td>作业次数、能耗、费用、效果评估</td></tr>
+    <tr><td>质量分析</td><td>按需</td><td>质检数据</td><td>等级分布、主要质量问题、趋势</td></tr>
+    <tr><td>综合运营</td><td>按需</td><td>全部 Agent</td><td>吞吐量、设备利用率、人员效率</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ─── 4 ─── -->
+<h2 id="s4">4. AgentScope 编排设计</h2>
+
+<h3>4.1 Agent 注册与发现</h3>
+<pre># orchestrator.py — 伪代码示意
+from agentscope import AgentScopeOrchestrator, AgentMeta
+
+orchestrator = AgentScopeOrchestrator(name="grain_orchestrator")
+
+# 注册子 Agent
+orchestrator.register_agent(
+    name="grain_condition",
+    agent_class=GrainConditionLangChainAgent,
+    description="粮情分析：传感器数据采集、异常检测、预警",
+    capabilities=["sensor_query", "anomaly_detection", "trend_forecast"],
+    priority=1
+)
+orchestrator.register_agent(
+    name="operation",
+    agent_class=IntelligentOperationLangChainAgent,
+    description="智能作业：方案生成、设备控制、过程监控",
+    capabilities=["ventilation", "fumigation", "temp_control"],
+    priority=2
+)
+orchestrator.register_agent(
+    name="inoutbound",
+    agent_class=InOutBoundLangChainAgent,
+    description="出入库管理：预约、质检、称重、结算",
+    capabilities=["inbound", "outbound", "settlement"],
+    priority=2
+)
+orchestrator.register_agent(
+    name="report",
+    agent_class=ReportLangChainAgent,
+    description="报表分析：数据查询、报表生成、可视化",
+    capabilities=["query", "report", "chart"],
+    priority=3
+)</pre>
+
+<h3>4.2 消息路由模式</h3>
+<table>
+  <thead><tr><th>模式</th><th>适用场景</th><th>实现方式</th></tr></thead>
+  <tbody>
+    <tr><td><strong>点对点</strong></td><td>粮情 Agent → 作业 Agent 推送异常</td><td>AgentScope 直接消息</td></tr>
+    <tr><td><strong>广播</strong></td><td>Orchestrator 向所有 Agent 下发天气预警</td><td>Pub/Sub Channel</td></tr>
+    <tr><td><strong>请求-响应</strong></td><td>用户查询 → Orchestrator → 报表 Agent</td><td>同步调用</td></tr>
+    <tr><td><strong>编排链</strong></td><td>入库流程: 出入库 → 质检 → 称重 → 结算</td><td>AgentScope Pipeline</td></tr>
+  </tbody>
+</table>
+
+<h3>4.3 典型协作流程</h3>
+
+<h4>4.3.1 异常响应流程</h4>
+<pre>
+1. 粮情 Agent 检测到 S-01 仓温度异常上升 (2°C/4h)
+2. 粮情 Agent → 发送 alert 给 Orchestrator
+3. Orchestrator → 请求 作业 Agent 分析原因并建议方案
+4. 作业 Agent:
+   a. 查询天气 (Tool: 外部气象 API)
+   b. 查询设备状态 (Tool: 设备控制)
+   c. 判断为"高温天气导致仓壁传热"
+   d. 建议"夜间机械通风降温，22:00-02:00"
+5. 作业 Agent → 返回方案给 Orchestrator
+6. Orchestrator → 仓储管理员确认 (或自动执行规则)
+7. 作业 Agent → 执行通风 (Tool: control_device)
+8. 监控执行，完成后更新粮情 Agent 的状态
+</pre>
+
+<h4>4.3.2 入库流程</h4>
+<pre>
+1. 司机到场 → 门卫扫描二维码
+2. Orchestrator 创建入库会话 → 通知 出入库 Agent
+3. 出入库 Agent: 预约单校验 → 车辆排队
+4. 出入库 Agent → 质检员 App 通知 → 扦样
+5. 出入库 Agent: 录入质检结果 (Tool: record_inspection)
+6. 出入库 Agent: 称毛重 (Tool: read_scale)
+7. 出入库 Agent: 分配仓房 (Tool: allocate_silo)
+8. 卸粮完成 → 称皮重 → 结算
+9. 报表 Agent: 自动更新日报统计数据
+</pre>
+
+<hr>
+
+<!-- ─── 5 ─── -->
+<h2 id="s5">5. LangChain 子Agent 实现要点</h2>
+
+<h3>5.1 通用基类</h3>
+<pre>from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.memory import ConversationBufferMemory
+from langchain.tools import BaseTool
+
+class BaseGrainAgent:
+    """所有子 Agent 的基类"""
+
+    def __init__(self, llm, tools: list[BaseTool], system_prompt: str):
+        self.llm = llm
+        self.tools = tools
+        self.memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            k=20
+        )
+        self.agent = create_openai_tools_agent(llm, tools, system_prompt)
+        self.executor = AgentExecutor(
+            agent=self.agent,
+            tools=tools,
+            memory=self.memory,
+            verbose=True,
+            max_iterations=10,
+            early_stopping_method="generate"
+        )
+
+    async def run(self, input_text: str, context: dict = None) -> str:
+        """运行 Agent"""
+        return await self.executor.ainvoke({
+            "input": input_text,
+            "context": context or {}
+        })</pre>
+
+<h3>5.2 AgentScope 集成桥接</h3>
+<pre># bridge.py — LangChain Agent → AgentScope Agent 适配器
+from agentscope.agent import AgentBase
+
+class LangChainBridgeAgent(AgentBase):
+    """将 LangChain AgentExecutor 包装为 AgentScope Agent"""
+
+    def __init__(self, name: str, langchain_executor: AgentExecutor, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.executor = langchain_executor
+
+    async def reply(self, x: dict = None) -> dict:
+        """AgentScope 消息接口"""
+        input_text = x.get("content", "")
+        context = x.get("context", {})
+        result = await self.executor.ainvoke({
+            "input": input_text,
+            "context": context
+        })
+        return {
+            "role": self.name,
+            "content": result.get("output", ""),
+            "metadata": result.get("intermediate_steps", [])
+        }</pre>
+
+<hr>
+
+<!-- ─── 6 ─── -->
+<h2 id="s6">6. 数据模型设计</h2>
+
+<h3>6.1 核心实体关系</h3>
+<pre>
+┌─────────────┐       ┌──────────────┐       ┌─────────────┐
+│  GrainSilo  │1────N│  GrainMetric  │       │  Device      │
+│  (仓房)      │       │  (粮情指标)    │       │  (设备)       │
+├─────────────┤       ├──────────────┤       ├─────────────┤
+│ silo_id     │       │ metric_id    │       │ device_id   │
+│ silo_code   │       │ silo_id (FK) │       │ silo_id(FK) │
+│ grain_type  │       │ timestamp    │       │ type         │
+│ capacity    │       │ temperature  │       │ status       │
+│ current_qty │       │ humidity     │       │ last_maintain│
+│ build_date  │       │ moisture     │       └─────────────┘
+│ status      │       │ co2          │
+└─────────────┘       │ pest_density │
+       │              └──────────────┘
+       │                     ○ InfluxDB (时序)
+       │
+       │  ┌─────────────┐       ┌──────────────┐
+       │  │ InboundOrder │       │ OutboundOrder│
+       │  │ (入库单)      │       │ (出库单)      │
+       │  ├─────────────┤       ├──────────────┤
+       │  │ order_id    │       │ order_id     │
+       │  │ vehicle     │       │ contract_id  │
+       │  │ grain_type  │       │ customer_id  │
+       │  │ gross_weight│       │ gross_weight │
+       │  │ tare_weight │       │ tare_weight  │
+       │  │ net_weight  │       │ net_weight   │
+       │  │ grade       │       │ destination  │
+       │  │ silo_id(FK) │       │ silo_id(FK)  │
+       │  │ inspector   │       │ created_at   │
+       │  │ created_at  │       └──────────────┘
+       │  └─────────────┘
+       │
+       │  ┌─────────────┐
+       │  │ OperationLog│
+       │  │ (作业记录)    │
+       │  ├─────────────┤
+       │  │ op_id       │
+       │  │ type        │
+       │  │ silo_id(FK) │
+       │  │ plan_json   │
+       │  │ cost_kwh    │
+       │  │ effect_eval │
+       │  │ created_by  │
+       │  │ created_at  │
+       │  └─────────────┘
+</pre>
+
+<hr>
+
+<!-- ─── 7 ─── -->
+<h2 id="s7">7. 项目阶段规划</h2>
+
+<h3>阶段一：核心框架搭建（4周）</h3>
+<table>
+  <thead><tr><th>任务</th><th>输出</th></tr></thead>
+  <tbody>
+    <tr><td>AgentScope Orchestrator 核心</td><td>注册中心、消息路由、Pipeline</td></tr>
+    <tr><td>LangChain 基类 + AgentScope Bridge</td><td>BaseGrainAgent, LangChainBridgeAgent</td></tr>
+    <tr><td>数据库建表 + 基础 API</td><td>schema.sql, FastAPI CRUD</td></tr>
+    <tr><td>粮情分析 Agent v1</td><td>传感器模拟 + 温度分析链</td></tr>
+  </tbody>
+</table>
+
+<h3>阶段二：业务 Agent 完善（4周）</h3>
+<table>
+  <thead><tr><th>任务</th><th>输出</th></tr></thead>
+  <tbody>
+    <tr><td>智能作业 Agent v1</td><td>通风决策链 + 设备控制接口</td></tr>
+    <tr><td>出入库 Agent v1</td><td>完整出入库流程链</td></tr>
+    <tr><td>Agent 间消息协作</td><td>异常响应流程、入库流程</td></tr>
+    <tr><td>管理端 UI v1</td><td>粮情看板、出入库操作界面</td></tr>
+  </tbody>
+</table>
+
+<h3>阶段三：智能增强（3周）</h3>
+<table>
+  <thead><tr><th>任务</th><th>输出</th></tr></thead>
+  <tbody>
+    <tr><td>报表分析 Agent</td><td>NL2SQL + 报表模板 + 图表生成</td></tr>
+    <tr><td>多模态质检（AI 视觉）</td><td>通过摄像头自动识别杂质/虫害</td></tr>
+    <tr><td>预测模型接入</td><td>粮温预测、虫害爆发预测</td></tr>
+    <tr><td>大屏可视化</td><td>ECharts 粮库数字孪生</td></tr>
+  </tbody>
+</table>
+
+<h3>阶段四：优化与上线（3周）</h3>
+<table>
+  <thead><tr><th>任务</th><th>输出</th></tr></thead>
+  <tbody>
+    <tr><td>性能优化</td><td>Agent 响应速度、LLM token 优化</td></tr>
+    <tr><td>安全审计</td><td>设备控制权限、数据访问控制</td></tr>
+    <tr><td>系统测试</td><td>全流程集成测试、压力测试</td></tr>
+    <tr><td>部署文档 + 培训</td><td>Docker Compose / K8s 部署脚本、操作手册</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ─── 8 ─── -->
+<h2 id="s8">8. 风险与对策</h2>
+<table>
+  <thead><tr><th>风险</th><th>影响</th><th>缓解措施</th></tr></thead>
+  <tbody>
+    <tr><td>LLM 幻觉导致错误作业指令</td><td>设备损坏、安全风险</td><td>所有设备控制指令需经过"安全校验 Chain" + 人工确认开关</td></tr>
+    <tr><td>Agent 间死锁</td><td>流程卡死</td><td>Orchestrator 设置超时机制 + 回滚策略</td></tr>
+    <tr><td>传感器数据采集延迟</td><td>粮情分析滞后</td><td>引入消息队列缓冲，异步处理</td></tr>
+    <tr><td>LLM 调用成本过高</td><td>运营成本超支</td><td>缓存常见查询，优先使用轻量模型处理常规任务</td></tr>
+    <tr><td>粮库网络环境差</td><td>设备控制失败</td><td>本地边缘计算 + 离线作业模式</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ─── 9 ─── -->
+<h2 id="s9">9. 附录</h2>
+
+<h3>9.1 关键术语表</h3>
+<table>
+  <thead><tr><th>术语</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>AgentScope</td><td>阿里巴巴开源的多智能体编排框架</td></tr>
+    <tr><td>LangChain</td><td>LLM 应用开发框架，提供 Chain、Tool、Memory 等抽象</td></tr>
+    <tr><td>扦样</td><td>从粮堆中按标准方法取样的操作</td></tr>
+    <tr><td>毛重/皮重/净重</td><td>毛重=粮+车，皮重=空车，净重=毛重-皮重</td></tr>
+    <tr><td>扣量</td><td>因水分/杂质超标而从净重中扣除的重量</td></tr>
+    <tr><td>NL2SQL</td><td>Natural Language to SQL，自然语言转数据库查询</td></tr>
+  </tbody>
+</table>
+
+<h3>9.2 参考资源</h3>
+<ul>
+  <li><a href="https://github.com/modelscope/agentscope" target="_blank">AgentScope 官方文档</a></li>
+  <li><a href="https://python.langchain.com/" target="_blank">LangChain 官方文档</a></li>
+  <li>GB/T 29890-2013《粮油储藏技术规范》</li>
+  <li>LS/T 1224-2020《粮食仓储信息化建设指南》</li>
+</ul>
+
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  <p>粮库仓储多智能体系统 — 需求设计文档 v1.0</p>
+</div>
+
+</body>
+</html>
