@@ -110,7 +110,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 // ========== Config ==========
-const API_URL = 'http://localhost:8000/api/query';
+const API_SILOS = 'http://localhost:8000/api/silos';
 const SILO_COLS = 4;
 const SILO_ROWS = 3;
 const SPACING = 4.5;
@@ -299,7 +299,8 @@ function buildSilos(data){
     scene.add(label);
 
     // Value label
-    let valStr = currentView==='temp'?`${tempVal}°C`:currentView==='humidity'?`${info.humidity}%`:currentView==='pest'?`${info.pest_density}头/kg`:'';
+    const to1=(v)=>typeof v==='number'?v.toFixed(1):v;
+    let valStr = currentView==='temp'?`${to1(tempVal)}°C`:currentView==='humidity'?`${to1(info.humidity)}%`:currentView==='pest'?`${to1(info.pest_density)}头/kg`:'';
     const valDiv = document.createElement('div');
     valDiv.textContent = valStr;
     valDiv.style.cssText = `color:${color.getStyle()};font-size:14px;font-weight:700;text-shadow:0 0 10px ${color.getStyle()}44`;
@@ -334,53 +335,35 @@ const particles = new THREE.Points(particleGeo, particleMat);
 particles.position.y = 2;
 scene.add(particles);
 
-// ========== Fetch Data ==========
+// ========== Fetch Data (fast — single API call, no LLM) ==========
 async function fetchSiloData(){
-  const results = {};
-  for(const sid of siloIds){
-    try{
-      const res = await fetch(API_URL, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({query:`查询${sid}仓的传感器数据`})
-      });
-      if(!res.ok) continue;
-      const data = await res.json();
-      // Parse temp from answer text
-      const answer = data.answer||'';
-      const upperMatch = answer.match(/上层[温度]{0,2}[:：]\s*([\d.]+)/);
-      const middleMatch = answer.match(/中层[温度]{0,2}[:：]\s*([\d.]+)/);
-      const lowerMatch = answer.match(/下层[温度]{0,2}[:：]\s*([\d.]+)/);
-      const humMatch = answer.match(/[湿度]{1,2}[:：]\s*([\d.]+)/);
-      const pestMatch = answer.match(/虫害[密度]{0,2}[:：]\s*([\d.]+)/);
-      const moistMatch = answer.match(/水分[:：]\s*([\d.]+)/);
-      const co2Match = answer.match(/CO.{0,1}[:：]\s*(\d+)/);
-
-      // Fallback mock data for silos that fail
-      const baseTemp = {'S-07':32.5,'S-03':25.2,'S-01':22.1,'S-02':23.5,'S-04':21.5,'S-05':24,'S-06':20.5,'S-08':19,'S-09':26.5,'S-10':23,'S-11':21,'S-12':24.5};
-      const baseHum = {'S-03':73,'S-07':65,'S-01':62,'S-02':58,'S-04':55,'S-05':60,'S-06':52,'S-08':48,'S-09':70,'S-10':59,'S-11':54,'S-12':61};
-      const basePest = {'S-03':7.2,'S-07':2.1,'S-01':1.2,'S-02':0.8,'S-04':0.5,'S-05':1.8,'S-06':0.3,'S-08':0.2,'S-09':3.5,'S-10':1,'S-11':0.6,'S-12':0.9};
-
-      results[sid] = {
-        temperature: {
-          upper: upperMatch?parseFloat(upperMatch[1]):(baseTemp[sid]||22)+Math.random()*2-1,
-          middle: middleMatch?parseFloat(middleMatch[1]):(baseTemp[sid]||22)*0.95+Math.random(),
-          lower: lowerMatch?parseFloat(lowerMatch[1]):(baseTemp[sid]||22)*0.85+Math.random(),
-        },
-        humidity: humMatch?parseFloat(humMatch[1]):(baseHum[sid]||60)+Math.random()*2-1,
-        moisture: moistMatch?parseFloat(moistMatch[1]):11.5+Math.random(),
-        pest_density: pestMatch?parseFloat(pestMatch[1]):(basePest[sid]||1)+Math.random()*0.2,
-        co2_ppm: co2Match?parseInt(co2Match[1]):400+Math.floor(Math.random()*200),
-      };
-    }catch(e){
-      // Fallback
-      const baseTemp = {'S-07':32.5,'S-03':25.2};
-      results[sid] = {
-        temperature:{upper:(baseTemp[sid]||22)+Math.random()*2-1,middle:(baseTemp[sid]||22)*0.95,lower:(baseTemp[sid]||22)*0.85},
-        humidity:60+Math.random()*10, moisture:11.5+Math.random(), pest_density:1+Math.random(), co2_ppm:450+Math.floor(Math.random()*100)
+  try{
+    const res = await fetch(API_SILOS);
+    if(!res.ok) throw new Error('API unavailable, using mock');
+    const data = await res.json();
+    const results={};
+    for(const s of data.silos){
+      results[s.id]={
+        temperature:{upper:s.temperature.upper,middle:s.temperature.middle,lower:s.temperature.lower},
+        humidity:s.humidity, moisture:s.moisture, pest_density:s.pest_density, co2_ppm:s.co2_ppm,
       };
     }
+    document.getElementById('updateTime').textContent=`更新: ${data.refreshed_at.slice(11,19)}`;
+    return results;
+  }catch(e){
+    // Fallback mock
+    console.warn('Using mock data:', e);
+    const baseTemp={'S-01':22.1,'S-02':23.5,'S-03':25.2,'S-04':21.5,'S-05':24,'S-06':20.5,'S-07':32.5,'S-08':19,'S-09':26.5,'S-10':23,'S-11':21,'S-12':24.5};
+    const baseHum={'S-01':62,'S-02':58,'S-03':73,'S-04':55,'S-05':60,'S-06':52,'S-07':65,'S-08':48,'S-09':70,'S-10':59,'S-11':54,'S-12':61};
+    const results={};
+    for(const sid of siloIds){
+      results[sid]={
+        temperature:{upper:(baseTemp[sid]||22)+Math.random()*2-1,middle:(baseTemp[sid]||22)*0.95,lower:(baseTemp[sid]||22)*0.85},
+        humidity:(baseHum[sid]||60)+Math.random()*2-1, moisture:11.5+Math.random(), pest_density:1+Math.random(), co2_ppm:450+Math.floor(Math.random()*100),
+      };
+    }
+    return results;
   }
-  return results;
 }
 
 async function updateScene(){

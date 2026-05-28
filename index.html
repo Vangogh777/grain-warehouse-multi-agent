@@ -124,6 +124,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <script>
 // ========== Config ==========
 const API_URL = 'http://localhost:8000/api/query';
+const API_STREAM = 'http://localhost:8000/api/query/stream';
 const AGENTS = [
   {id:0,name:'粮情分析',icon:'🌡',color:'#00b4ff'},
   {id:1,name:'智能作业',icon:'⚙',color:'#ffa500'},
@@ -230,52 +231,87 @@ function addResultMsg(steps,conclusion,agentsUsed,toolCount,elapsed){
 function showTyping(){typing.classList.add('show')}
 function hideTyping(){typing.classList.remove('show')}
 
-// ========== API Call ==========
+// ========== API Call (Streaming SSE) ==========
 async function ask(query){
   if(!query.trim())return;
   addMsg('user',query);
   chatInp.value='';sendBtn.disabled=true;showTyping();
 
+  // Create streaming message container
+  const sysMsg=document.createElement('div');sysMsg.className='msg sys';
+  sysMsg.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub"><div style="font-size:12px;color:rgba(200,214,229,.35);margin-bottom:6px">⚡ 多 Agent 协同推理</div><div class="steps" id="streamSteps"></div><div class="conc" id="streamConc" style="display:none"></div></div>`;
+  chatMsgs.appendChild(sysMsg);chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  const stepsEl=document.getElementById('streamSteps');
+  const concEl=document.getElementById('streamConc');
+
+  function addStep(icon,iconBg,iconColor,label,msg,color){
+    const d=document.createElement('div');d.className='step';d.style.animationDelay='0s';
+    d.innerHTML=`<span class="sn" style="background:${iconBg};color:${iconColor}">${icon}</span><span>${label?`<span class="sa" style="color:${color||'#c8d6e5'}">${label}</span> `:''}${msg?`<div class="sm">${msg}</div>`:''}</span>`;
+    stepsEl.appendChild(d);
+  }
+
   try{
-    const res=await fetch(API_URL,{
+    const res=await fetch(API_STREAM,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({query})
     });
     hideTyping();
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const data=await res.json();
 
-    // Flash agents
-    const uniqueAgents=[...new Set(data.processes.flatMap(p=>p.agents))];
-    for(const name of uniqueAgents){
-      const a=AGENTS.find(x=>x.name===name);
-      if(a){flashAgent(a.id);await new Promise(r=>setTimeout(r,600))}
+    const reader=res.body.getReader();
+    const decoder=new TextDecoder();
+    let buffer='';
+
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buffer+=decoder.decode(value,{stream:true});
+      const parts=buffer.split('\n\n');
+      buffer=parts.pop()||'';
+      for(const part of parts){
+        if(!part.startsWith('data: '))continue;
+        try{
+          const ev=JSON.parse(part.slice(6));
+          switch(ev.type){
+            case 'plan':
+              addStep('📋','rgba(0,180,255,.1)','#00d4ff','Orchestrator',`🎯 ${ev.scenario} · 请求 ${ev.request_id}`,'#00d4ff');
+              break;
+            case 'step':
+              addStep(`S${ev.step}`,'rgba(0,255,136,.1)','#00ff88','',`${ev.mode} · ${ev.desc}`,'#00ff88');
+              break;
+            case 'agent_start':{
+              const a=AGENTS.find(x=>x.name===ev.agent);
+              addStep('▶',a?a.color+'22':'rgba(0,180,255,.1)',a?a.color:'#00d4ff',ev.agent,ev.task,a?a.color:'#00d4ff');
+              if(a)flashAgent(a.id);
+              chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
+            }
+            case 'tool_calls':
+              for(const tc of ev.calls)
+                addStep('🔧','transparent','rgba(0,180,255,.4)','',`${tc.tool}(${tc.input})`,'rgba(0,180,255,.5)');
+              chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
+            case 'agent_done':
+              clearFlash();
+              addStep('✓','rgba(0,255,136,.1)','#00ff88','',`${ev.agent} 完成 (${ev.elapsed}s, ${ev.tool_count}次)`,'rgba(200,214,229,.4)');
+              chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
+            case 'agent_error':
+              addStep('✗','rgba(255,50,50,.1)','#ff4757','',`${ev.agent}: ${ev.error}`,'#ff4757');
+              break;
+            case 'conclusion':
+              concEl.style.display='block';
+              concEl.innerHTML=renderMd(ev.text);
+              chatMsgs.scrollTop=chatMsgs.scrollHeight;
+              break;
+            case 'done':
+              const meta=document.createElement('div');
+              meta.className='meta';
+              meta.innerHTML=`<span>🤖 ${ev.agents_used.join('、')}</span><span>🔧 ${ev.tool_calls_count}次</span>`;
+              sysMsg.querySelector('.bub').appendChild(meta);
+              break;
+          }
+        }catch(e){/*ignore parse errors*/}
+      }
     }
-    clearFlash();
-
-    // Extract steps for display
-    const steps=[];
-    data.processes.forEach(p=>{
-      p.results.forEach(r=>{
-        r.tool_calls.forEach(tc=>{
-          steps.push({agent:r.agent,tool:tc.tool,msg:tc.output.substring(0,80)});
-        });
-        // Add a summary step
-        steps.push({agent:r.agent,tool:'',msg:`${r.success?'✅':'❌'} 执行完成 (${r.elapsed}s)`});
-      });
-    });
-
-    // Render conclusion markdown
-    data.answer = renderMd(data.answer);
-    const totalElapsed=data.processes.reduce((sum,p)=>sum+Math.max(...p.results.map(r=>r.elapsed||0)),0);
-    addResultMsg(
-      steps.slice(-10), // last 10 steps for readability
-      data.answer,
-      data.agents_used,
-      data.tool_calls_count,
-      totalElapsed.toFixed(1)
-    );
   }catch(e){
     hideTyping();
     addMsg('sys',`<div style="color:#ff6b6b">❌ 请求失败: ${e.message}<br><br><span style="font-size:12px;color:rgba(200,214,229,.4)">确保后端已启动: <b>uvicorn src.api.server:app --reload --port 8000</b></span></div>`);

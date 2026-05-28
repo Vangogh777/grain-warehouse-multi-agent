@@ -252,3 +252,113 @@ class GrainOrchestrator:
             "processes": processes,
             "tool_calls": all_tool_calls,
         }
+
+    async def process_stream(self, query: str):
+        """流式处理 — 逐步 yield 事件供 SSE 推送"""
+        request_id = str(uuid.uuid4())[:8]
+        scenario = self._detect_scenario(query)
+        silo_id = self._extract_silo_id(query)
+        agents_used = []
+        all_tool_calls = []
+        final_answer = ""
+
+        async def run_and_track(name, task, step_num, mode):
+            nonlocal agents_used, all_tool_calls
+            agents_used.append(name)
+            yield {"type": "agent_start", "agent": name, "step": step_num, "mode": mode, "task": task[:60]}
+            start = datetime.now()
+            try:
+                result = await self.agents[name].run(task)
+                elapsed = (datetime.now() - start).total_seconds()
+                tc = result.get("tool_calls", [])
+                all_tool_calls.extend(tc)
+                yield {"type": "tool_calls", "agent": name, "calls": [{"tool": t["tool"], "input": str(t["input"])[:40]} for t in tc]}
+                yield {"type": "agent_done", "agent": name, "elapsed": round(elapsed, 1), "tool_count": len(tc)}
+                return result["output"]
+            except Exception as e:
+                yield {"type": "agent_error", "agent": name, "error": str(e)}
+                return f"【{name}执行出错】{e}"
+
+        yield {"type": "plan", "scenario": scenario, "request_id": request_id}
+
+        if scenario == "ventilation":
+            sid = silo_id or "S-07"
+            yield {"type": "step", "step": 1, "agents": ["粮情分析", "智能作业"], "mode": "并行", "desc": f"粮情分析查数据 + 智能作业查天气/电价"}
+            
+            async def grain_task():
+                async for e in run_and_track("粮情分析", f"分析仓房{sid}的当前粮情状态", 1, "并行"):
+                    yield e
+            async def weather_task():
+                async for e in run_and_track("智能作业", "查询天气、电价，判断是否适合通风", 1, "并行"):
+                    yield e
+
+            g = grain_task().__aiter__()
+            w = weather_task().__aiter__()
+            grain_done, weather_done = False, False
+            grain_out, weather_out = "", ""
+
+            # 交替读取两个 async gen 实现"视觉并行"
+            while not (grain_done and weather_done):
+                if not grain_done:
+                    try: e = await g.__anext__(); yield e
+                    except StopAsyncIteration: grain_done = True
+                if not weather_done:
+                    try: e = await w.__anext__(); yield e
+                    except StopAsyncIteration: weather_done = True
+
+            # 实际并行执行拿结果
+            gf = self._run_agent(self.agents["粮情分析"], f"分析仓房{sid}的当前粮情状态")
+            wf = self._run_agent(self.agents["智能作业"], "查询天气、电价，判断是否适合通风")
+            gr, wr = await asyncio.gather(gf, wf)
+            grain_out, weather_out = gr["output"], wr["output"]
+
+            yield {"type": "step", "step": 2, "agents": ["智能作业"], "mode": "串行", "desc": "综合粮情+天气判断通风条件"}
+            combined = f"粮情：{grain_out[:500]}\n\n天气：{weather_out[:500]}\n\n请综合判断{sid}是否满足通风条件并给出方案"
+            async for e in run_and_track("智能作业", combined, 2, "串行"):
+                yield e
+            dr = await self._run_agent(self.agents["智能作业"], combined)
+            final_answer = dr["output"]
+
+        elif scenario == "inoutbound":
+            yield {"type": "step", "step": 1, "agents": ["出入库"], "mode": "串行", "desc": "查询出入库数据"}
+            async for e in run_and_track("出入库", f"用户查询出入库业务：{query}", 1, "串行"):
+                yield e
+            r = await self._run_agent(self.agents["出入库"], f"用户查询出入库业务：{query}")
+            final_answer = r["output"]
+
+        elif scenario == "report":
+            yield {"type": "step", "step": 1, "agents": ["报表分析", "粮情分析"], "mode": "并行", "desc": "查库存+查异常"}
+            async for e in run_and_track("报表分析", f"{query}，查库存汇总和异常仓房", 1, "并行"):
+                yield e
+            async for e in run_and_track("粮情分析", "分析当前粮情异常", 1, "并行"):
+                yield e
+            inv_f = self._run_agent(self.agents["报表分析"], f"{query}，查库存汇总和异常仓房")
+            trend_f = self._run_agent(self.agents["粮情分析"], "分析当前粮情异常")
+            inv_r, trend_r = await asyncio.gather(inv_f, trend_f)
+            combined = f"报表：{inv_r['output'][:500]}\n粮情：{trend_r['output'][:500]}\n\n综合生成完整报告"
+            yield {"type": "step", "step": 2, "agents": ["报表分析"], "mode": "串行", "desc": "生成完整报告"}
+            async for e in run_and_track("报表分析", combined, 2, "串行"):
+                yield e
+            fr = await self._run_agent(self.agents["报表分析"], combined)
+            final_answer = fr["output"]
+
+        else:
+            yield {"type": "step", "step": 1, "agents": list(self.agents.keys()), "mode": "并行", "desc": "全部 Agent 分析"}
+            tasks = []
+            for name, agent_obj in self.agents.items():
+                tasks.append(self._run_agent(agent_obj, query))
+            for name in self.agents:
+                async for e in run_and_track(name, query, 1, "并行"):
+                    yield e
+            results = await asyncio.gather(*tasks)
+            combined = "\n\n".join([f"【{r['agent']}】\n{r['output'][:300]}" for r in results])
+            aggregate = f"用户问题：{query}\n\n各Agent结果：\n{combined}\n请综合给出清晰回答"
+            yield {"type": "step", "step": 2, "agents": ["智能作业"], "mode": "串行", "desc": "结果聚合"}
+            async for e in run_and_track("智能作业", aggregate, 2, "串行"):
+                yield e
+            fr = await self._run_agent(self.agents["智能作业"], aggregate)
+            final_answer = fr["output"]
+
+        self.conversation_history.append({"request_id": request_id, "query": query, "scenario": scenario})
+        yield {"type": "conclusion", "text": final_answer}
+        yield {"type": "done", "agents_used": list(set(agents_used)), "tool_calls_count": len(all_tool_calls)}

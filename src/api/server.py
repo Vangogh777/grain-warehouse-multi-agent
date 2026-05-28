@@ -1,5 +1,7 @@
 """FastAPI 接口 — 供前端 UI 调用（4 Agent 完整版）"""
+import json
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -7,7 +9,7 @@ import sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.tools.mock_data import refresh_sensor_data
+from src.tools.mock_data import refresh_sensor_data, get_sensor_data, get_silo_info
 from src.agents.grain_condition import create_grain_condition_agent
 from src.agents.operation import create_operation_agent
 from src.agents.inoutbound import create_inoutbound_agent
@@ -73,6 +75,46 @@ async def query(req: QueryRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/query/stream")
+async def query_stream(req: QueryRequest):
+    """流式查询 — SSE 事件流"""
+    if not _orchestrator:
+        raise HTTPException(status_code=503, detail="系统未初始化")
+    async def event_stream():
+        async for event in _orchestrator.process_stream(req.query):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.get("/api/silos")
+async def get_all_silos():
+    """快速返回所有仓房传感器数据（不经过 LLM，毫秒级响应）"""
+    silos = []
+    for i in range(1, 13):
+        sid = f"S-{i:02d}"
+        data = get_sensor_data(sid)
+        info = get_silo_info(sid)
+        if data and info:
+            silos.append({
+                "id": sid,
+                "grain_type": info["grain_type"],
+                "grade": info["grade"],
+                "capacity": info["capacity"],
+                "current_qty": info["current_qty"],
+                "temperature": {
+                    "upper": round(data["temperature"]["upper"], 1),
+                    "middle": round(data["temperature"]["middle"], 1),
+                    "lower": round(data["temperature"]["lower"], 1),
+                },
+                "humidity": round(data["humidity"], 1),
+                "moisture": round(data["moisture"], 1),
+                "pest_density": round(data["pest_density"], 1),
+                "co2_ppm": data["co2_ppm"],
+                "timestamp": data["timestamp"],
+            })
+    return {"silos": silos, "count": len(silos), "refreshed_at": silos[0]["timestamp"] if silos else ""}
 
 
 @app.post("/api/refresh")
