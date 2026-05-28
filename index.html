@@ -1,460 +1,286 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>粮库多智能体 · 智能对话</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>粮库多智能体系统</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#080c1a;color:#c8d6e5;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,180,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,.03) 1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:0}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,180,255,.03)1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,.03)1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:0}
 
-/* Header */
-.header{position:relative;z-index:10;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,180,255,.1);background:rgba(8,12,26,.85);backdrop-filter:blur(12px)}
-.header h1{font-size:16px;font-weight:700;background:linear-gradient(135deg,#00b4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px}
-.header .status{display:flex;align-items:center;gap:6px;font-size:11px;color:#4a9}
-.dot-live{width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff8866;animation:pulse 1.5s infinite}
+.header{position:relative;z-index:10;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,180,255,.1);background:rgba(8,12,26,.85);backdrop-filter:blur(12px)}
+.header h1{font-size:17px;font-weight:700;background:linear-gradient(135deg,#00b4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .status{display:flex;align-items:center;gap:8px;font-size:12px;color:#4a9}
+.dot-live{width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 10px #00ff8866;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status .key{color:rgba(200,214,229,.3);font-size:11px}
 
-/* Main layout */
-.main{position:relative;z-index:1;display:flex;height:calc(100vh - 50px)}
+.main{position:relative;z-index:1;display:flex;height:calc(100vh - 54px)}
 
-/* ===== Left: Network ===== */
-.network-panel{width:420px;min-width:320px;display:flex;flex-direction:column;padding:14px;gap:10px;border-right:1px solid rgba(0,180,255,.06)}
-.network-title{font-size:11px;color:rgba(200,214,229,.3);letter-spacing:1px;padding:0 4px}
-.network-canvas-wrap{flex:1;background:rgba(12,20,40,.4);border-radius:12px;border:1px solid rgba(0,180,255,.06);overflow:hidden;position:relative;min-height:200px}
+/* Left: Agent Network */
+.network-panel{width:380px;min-width:300px;display:flex;flex-direction:column;padding:14px;gap:10px;border-right:1px solid rgba(0,180,255,.06)}
+.panel-title{font-size:11px;color:rgba(200,214,229,.3);letter-spacing:1px}
+.network-canvas-wrap{flex:1;background:rgba(12,20,40,.4);border-radius:12px;border:1px solid rgba(0,180,255,.06);overflow:hidden;min-height:200px}
 .network-canvas-wrap canvas{width:100%;height:100%;display:block}
-
-/* Agent mini status */
 .agent-strip{display:flex;gap:6px}
-.agent-chip{flex:1;display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;background:rgba(12,20,40,.5);border:1px solid rgba(0,180,255,.06);font-size:11px;cursor:pointer;transition:.2s}
-.agent-chip:hover{border-color:rgba(0,180,255,.2);transform:translateY(-1px)}
-.agent-chip .chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.agent-chip .chip-dot.busy{animation:blink .6s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.agent-chip .chip-name{color:rgba(200,214,229,.6);font-weight:500}
-.agent-chip .chip-status{color:rgba(200,214,229,.3);font-size:10px;margin-left:auto}
+.agent-chip{flex:1;display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px;background:rgba(12,20,40,.5);border:1px solid rgba(0,180,255,.06);font-size:10px;transition:.2s}
+.agent-chip .dot{width:5px;height:5px;border-radius:50%}
 
-/* ===== Right: Chat ===== */
+/* Right: Chat */
 .chat-panel{flex:1;display:flex;flex-direction:column;min-width:0}
-.chat-messages{flex:1;overflow-y:auto;padding:16px 20px 8px;display:flex;flex-direction:column;gap:10px}
-.chat-messages::-webkit-scrollbar{width:4px}
-.chat-messages::-webkit-scrollbar-track{background:transparent}
-.chat-messages::-webkit-scrollbar-thumb{background:rgba(0,180,255,.15);border-radius:2px}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+.chat-msgs::-webkit-scrollbar{width:4px}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,180,255,.15);border-radius:2px}
 
-/* Message bubbles */
-.msg{max-width:85%;display:flex;gap:10px;animation:msgIn .35s ease-out;flex-shrink:0}
+.msg{max-width:90%;display:flex;gap:10px;animation:in .35s ease-out;flex-shrink:0}
 .msg.user{align-self:flex-end;flex-direction:row-reverse}
-.msg.system{align-self:flex-start}
-@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.msg.sys{align-self:flex-start}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-.msg .avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.msg.user .avatar{background:rgba(0,180,255,.15)}
-.msg.system .avatar{background:rgba(0,255,136,.1)}
+.msg .av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.msg.user .av{background:rgba(0,180,255,.15)}
+.msg.sys .av{background:rgba(0,255,136,.1)}
+.msg .bub{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.7}
+.msg.user .bub{background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.15);color:#e0ecff}
+.msg.sys .bub{background:rgba(12,20,40,.6);border:1px solid rgba(0,180,255,.06);color:#c8d6e5}
 
-.msg .bubble{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6}
-.msg.user .bubble{background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.15);color:#e0ecff}
-.msg.system .bubble{background:rgba(12,20,40,.6);border:1px solid rgba(0,180,255,.06);color:#c8d6e5}
+/* Reasoning steps inside bubble */
+.steps{margin-top:8px;border-top:1px solid rgba(0,180,255,.08);padding-top:8px}
+.step{display:flex;align-items:flex-start;gap:8px;padding:3px 0;font-size:12px;line-height:1.5;opacity:0;animation:fs .3s forwards}
+.step .sn{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
+.step .sa{font-weight:600;margin-right:4px}
+.step .st{color:rgba(0,180,255,.5);font-size:11px}
+.step .sm{color:rgba(200,214,229,.65)}
+@keyframes fs{to{opacity:1}}
 
-/* Step-by-step reasoning inside system message */
-.reasoning{margin-top:6px;border-top:1px solid rgba(0,180,255,.08);padding-top:8px}
-.rstep{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px;line-height:1.5;opacity:0;animation:fadeStep .3s forwards}
-.rstep .rnum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
-.rstep .ragent{font-weight:600;margin-right:4px}
-.rstep .rtool{color:rgba(0,180,255,.6);font-size:11px}
-.rstep .rmsg{color:rgba(200,214,229,.7)}
-.rstep .rarrow{color:rgba(0,180,255,.3);margin:0 4px}
-@keyframes fadeStep{to{opacity:1}}
+.sys .conc{margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.12);font-size:13px;color:#8fecb0;line-height:1.6}
+.sys .conc::before{content:'✅ ';color:#00ff88;font-weight:600}
+.sys .meta{display:flex;gap:10px;margin-top:6px;font-size:11px;color:rgba(200,214,229,.25)}
 
-.system .conclusion{margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.12);font-weight:500;font-size:13px;color:#8fecb0}
-.system .conclusion::before{content:'✅ 结论: ';color:#00ff88}
-
-/* Typing indicator */
-.typing{display:flex;gap:8px;align-items:center;padding:6px 0;display:none}
-.typing.active{display:flex}
-.typing .dots{display:flex;gap:4px}
-.typing .dots span{width:6px;height:6px;border-radius:50%;background:rgba(0,180,255,.4);animation:dotBounce 1.4s infinite}
-.typing .dots span:nth-child(2){animation-delay:.2s}
-.typing .dots span:nth-child(3){animation-delay:.4s}
-@keyframes dotBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-.typing .typing-text{font-size:12px;color:rgba(200,214,229,.3)}
+/* Typing */
+.typing{display:none;gap:8px;align-items:center;padding:6px 0}
+.typing.show{display:flex}
+.typing .td{display:flex;gap:4px}
+.typing .td span{width:6px;height:6px;border-radius:50%;background:rgba(0,180,255,.4);animation:db 1.4s infinite}
+.typing .td span:nth-child(2){animation-delay:.2s}
+.typing .td span:nth-child(3){animation-delay:.4s}
+@keyframes db{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.typing .tt{font-size:12px;color:rgba(200,214,229,.25);margin-left:6px}
 
 /* Quick questions */
-.quick-qs{padding:8px 20px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(0,180,255,.05)}
-.quick-qs .qchip{padding:5px 12px;border-radius:14px;background:rgba(0,180,255,.06);border:1px solid rgba(0,180,255,.1);font-size:11px;color:rgba(200,214,229,.5);cursor:pointer;transition:.2s;white-space:nowrap}
-.quick-qs .qchip:hover{background:rgba(0,180,255,.12);color:#c8d6e5;border-color:rgba(0,180,255,.2)}
+.quick{padding:6px 20px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(0,180,255,.04)}
+.quick .qc{padding:5px 12px;border-radius:14px;background:rgba(0,180,255,.05);border:1px solid rgba(0,180,255,.08);font-size:11px;color:rgba(200,214,229,.4);cursor:pointer;transition:.2s}
+.quick .qc:hover{background:rgba(0,180,255,.1);color:#c8d6e5;border-color:rgba(0,180,255,.18)}
 
-/* Chat input */
-.chat-input-wrap{display:flex;gap:8px;padding:10px 20px 14px;border-top:1px solid rgba(0,180,255,.06)}
-.chat-input-wrap input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,180,255,.1);background:rgba(12,20,40,.5);color:#c8d6e5;font-size:13px;outline:none;transition:.2s}
-.chat-input-wrap input::placeholder{color:rgba(200,214,229,.2)}
-.chat-input-wrap input:focus{border-color:rgba(0,180,255,.3);box-shadow:0 0 12px rgba(0,180,255,.05)}
-.chat-input-wrap button{padding:10px 20px;border:none;border-radius:8px;background:linear-gradient(135deg,#00b4ff,#0090dd);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
-.chat-input-wrap button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,180,255,.25)}
-.chat-input-wrap button:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+/* Input */
+.inp{display:flex;gap:8px;padding:10px 20px 14px;border-top:1px solid rgba(0,180,255,.04)}
+.inp input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,180,255,.1);background:rgba(12,20,40,.5);color:#c8d6e5;font-size:13px;outline:none;transition:.2s}
+.inp input::placeholder{color:rgba(200,214,229,.15)}
+.inp input:focus{border-color:rgba(0,180,255,.25);box-shadow:0 0 12px rgba(0,180,255,.05)}
+.inp button{padding:10px 22px;border:none;border-radius:8px;background:linear-gradient(135deg,#00b4ff,#0090dd);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.inp button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,180,255,.2)}
+.inp button:disabled{opacity:.3;cursor:not-allowed;transform:none}
 
-@media(max-width:860px){.network-panel{width:100%;max-height:240px;border-right:none;border-bottom:1px solid rgba(0,180,255,.06)}.main{flex-direction:column}}
+@media(max-width:860px){.network-panel{width:100%;max-height:220px;border-right:none;border-bottom:1px solid rgba(0,180,255,.06)}.main{flex-direction:column}}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>🌾 粮库仓储多智能体系统</h1>
-  <div class="status"><span class="dot-live"></span> AgentScope v0.1 · 模拟环境</div>
+  <h1>🌾 粮库多智能体系统</h1>
+  <div class="status"><span class="dot-live"></span> 运行中 · <span class="key" id="apiStatus">后端未连接</span></div>
 </div>
 
 <div class="main">
-  <!-- Left: Network -->
   <div class="network-panel">
-    <div class="network-title">⚡ AGENT 协同网络</div>
+    <div class="panel-title">⚡ AGENT 协同网络</div>
     <div class="network-canvas-wrap"><canvas id="netCanvas"></canvas></div>
     <div class="agent-strip" id="agentStrip"></div>
   </div>
 
-  <!-- Right: Chat -->
   <div class="chat-panel">
-    <div class="chat-messages" id="chatMessages"></div>
-    <div class="typing" id="typing"><div class="dots"><span></span><span></span><span></span></div><span class="typing-text">系统正在分析...</span></div>
-    <div class="quick-qs" id="quickQs"></div>
-    <div class="chat-input-wrap">
-      <input type="text" id="chatInput" placeholder="输入你的问题，例如：S-07仓是否满足通风条件？" autofocus>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="typing" id="typing"><div class="td"><span></span><span></span><span></span></div><span class="tt">Agent 协同分析中...</span></div>
+    <div class="quick" id="quickQs"></div>
+    <div class="inp">
+      <input id="chatInp" placeholder="输入问题，例如：S-07仓是否满足通风条件？" autofocus>
       <button id="sendBtn">发送</button>
     </div>
   </div>
 </div>
 
 <script>
-// ========== Agent 定义 ==========
+// ========== Config ==========
+const API_URL = 'http://localhost:8000/api/query';
 const AGENTS = [
-  { id:0, name:'粮情分析', icon:'🌡', color:'#00b4ff', desc:'传感器数据采集·异常检测·趋势预测',
-    tools:['get_sensor_data(silo_id) → 温湿度/水分/虫害','get_history(silo_id,range) → 时序趋势','analyze_anomaly(data) → 异常评分'] },
-  { id:1, name:'智能作业', icon:'⚙', color:'#ffa500', desc:'通风/熏蒸/控温方案·设备控制',
-    tools:['get_weather() → 未来72h气象','get_elec_price() → 峰谷电价','check_device(silo_id) → 设备状态','control_device(id,cmd) → 执行结果'] },
-  { id:2, name:'出入库', icon:'🚛', color:'#00ff88', desc:'预约·质检·称重·结算全流程',
-    tools:['query_order(date) → 订单列表','get_scale(id) → 地磅读数','allocate_silo(type,qty) → 推荐仓房','calc_settlement(data) → 结算单'] },
-  { id:3, name:'报表分析', icon:'📋', color:'#a855f7', desc:'NL2SQL·报表生成·趋势分析',
-    tools:['nl2sql(query) → SQL语句','query_db(sql) → 查询结果','gen_chart(data,type) → 图表','export_report(format) → 文件'] },
+  {id:0,name:'粮情分析',icon:'🌡',color:'#00b4ff'},
+  {id:1,name:'智能作业',icon:'⚙',color:'#ffa500'},
+  {id:2,name:'出入库',icon:'🚛',color:'#00ff88'},
+  {id:3,name:'报表分析',icon:'📋',color:'#a855f7'},
 ];
 
-// ========== 场景脚本 ==========
-// 每个场景：用户问题 → 系统步骤(谁+调了什么工具+说了什么) → 结论
-const SCENARIOS = {
-  // 通风条件判断
-  '通风': {
-    steps: [
-      { agent:0, tool:'get_sensor_data("S-07")', msg:'正在读取 S-07 仓 3 层 12 个测温点数据...' },
-      { agent:0, tool:'analyze_anomaly(sensor_data)', msg:'S-07 当前上层粮温 32.5°C，中层 30.1°C，下层 26.8°C，温差 5.7°C' },
-      { agent:0, tool:'null', msg:'⚠️ 上层温度接近预警阈值 (35°C)，且存在明显分层，建议通风均温' },
-      { agent:1, tool:'get_weather()', msg:'正在查询未来 72h 气象数据...' },
-      { agent:1, tool:'null', msg:'🌤 今日夜间 22:00~06:00：气温 20~24°C，湿度 55~65%，东北风 3 级，适宜机械通风' },
-      { agent:1, tool:'get_elec_price()', msg:'⚡ 当前时段：谷电 (¥0.35/kWh)，22:00 后进入谷电时段' },
-      { agent:1, tool:'check_device("S-07")', msg:'🔧 S-07 设备检查：轴流风机 在线 ✓ | 电动窗 在线 ✓ | 测温系统 在线 ✓' },
-    ],
-    conclusion: '🟢 S-07 仓满足通风条件！建议今晚 22:00~02:00 开启机械通风，风量 40000m³/h，预计降温 3~5°C，电费约 ¥31.5。已生成作业方案等待确认。'
-  },
-  // 粮情异常
-  '粮情': {
-    steps: [
-      { agent:0, tool:'get_history("all", "24h")', msg:'正在拉取全部 12 个仓房最近 24h 粮情数据...' },
-      { agent:0, tool:'analyze_anomaly(history_data)', msg:'📊 数据分析完成，共处理 2,304 条时序记录' },
-      { agent:0, tool:'null', msg:'✅ 多数仓房粮情正常，发现 2 处异常：' },
-      { agent:0, tool:'null', msg:'① S-07 仓上层温升速率 0.8°C/4h，高于正常值 (0.3°C/4h)' },
-      { agent:0, tool:'null', msg:'② S-03 仓湿度持续 72h > 72%RH，有结露风险' },
-      { agent:1, tool:'null', msg:'已通知智能作业Agent 对 S-03 进行除湿评估' },
-    ],
-    conclusion: '📋 粮情简报：12 个仓房中 10 个正常，S-07 需关注温度趋势，S-03 需尽快除湿。已自动通知相关 Agent 制定方案。'
-  },
-  // 出入库
-  '出入库': {
-    steps: [
-      { agent:2, tool:'query_order("today")', msg:'正在查询今日出入库记录...' },
-      { agent:2, tool:'null', msg:'📋 今日入库预约 18 车，已完成 14 车；出库指令 6 条，已完成 5 条' },
-      { agent:2, tool:'get_scale("地磅01")', msg:'⚖ 地磅 01 号当前排队 3 车，预计等待 20 分钟' },
-      { agent:2, tool:'allocate_silo("小麦", 24000)', msg:'🏭 下一车入库推荐仓房：S-06（剩余容量 320t，同品种同等级）' },
-      { agent:2, tool:'calc_settlement({gross:32500,tare:8500,grade:"二等"})', msg:'🧾 最近一笔结算：净重 23,820kg × ¥2.36/kg = ¥56,215.20' },
-    ],
-    conclusion: '🚛 今日出入库趋于正常。已完成 14 车入库 (328t)、5 车出库 (156t)。当前排队 3 车，预测今日可完成全部预约。'
-  },
-  // 熏蒸评估
-  '熏蒸': {
-    steps: [
-      { agent:0, tool:'get_sensor_data("S-03")', msg:'正在读取 S-03 仓虫害传感器数据...' },
-      { agent:0, tool:'null', msg:'🔬 S-03 仓虫害密度：7.2 头/kg（阈值 10 头/kg），未超标但处于上升趋势' },
-      { agent:0, tool:'get_history("S-03","7d")', msg:'📈 近 7 天虫害趋势：2.1 → 3.5 → 4.8 → 5.9 → 6.5 → 7.0 → 7.2 头/kg，持续上升' },
-      { agent:1, tool:'check_device("S-03")', msg:'🔧 S-03 熏蒸设备检查：PH₃ 发生器 在线 ✓ | 气密性 合格 ✓ | 报警器 在线 ✓' },
-      { agent:1, tool:'get_weather()', msg:'🌤 未来 3 天气象：晴好，气温 22~28°C，风力 2~3 级，符合熏蒸作业条件' },
-      { agent:1, tool:'null', msg:'📋 建议方案：PH₃ 熏蒸 7 天，剂量 3g/m³，设警戒区 30m，需审批后执行' },
-    ],
-    conclusion: '⚠️ S-03 虫害呈快速上升趋势，建议尽快安排熏蒸。已生成熏蒸方案（PH₃ 3g/m³，7 天），需要仓库主管审批后执行。'
-  },
-  // 默认/通用
-  '默认': {
-    steps: [
-      { agent:0, tool:'query_all_silos()', msg:'正在查询各仓房最新状态...' },
-      { agent:0, tool:'null', msg:'📡 12 个仓房数据已获取，正在分析...' },
-      { agent:3, tool:'nl2sql(user_query)', msg:'🔄 正在将问题转为数据库查询...' },
-      { agent:3, tool:'query_db(sql)', msg:'🗄 查询完成，正在整理结果...' },
-    ],
-    conclusion: '已收到您的问题，系统正在进行多 Agent 协同分析。请尝试更具体的问题，例如询问某个仓房的通风条件、粮情变化或出入库情况。'
-  }
-};
-
-// ========== Canvas 网络 ==========
+// ========== Canvas ==========
 const canvas = document.getElementById('netCanvas');
 const ctx = canvas.getContext('2d');
-let W, H, activeAgent = -1;
+let W,H,activeAgent=-1,animFrame;
 
-function resize() {
-  const r = canvas.parentElement.getBoundingClientRect();
-  if (r.width === 0 || r.height === 0) return;
-  canvas.width = r.width * devicePixelRatio;
-  canvas.height = r.height * devicePixelRatio;
-  canvas.style.width = r.width + 'px';
-  canvas.style.height = r.height + 'px';
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  W = r.width; H = r.height;
+function resize(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  if(!r.width)return;
+  canvas.width=r.width*devicePixelRatio;canvas.height=r.height*devicePixelRatio;
+  canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';
+  ctx.scale(devicePixelRatio,devicePixelRatio);W=r.width;H=r.height;
 }
-resize(); window.addEventListener('resize', resize);
+resize();window.addEventListener('resize',resize);
 
-let animFrame;
-
-function drawLoop() {
-  const r = canvas.parentElement.getBoundingClientRect();
-  if (r.width === 0 || r.height === 0) { animFrame = requestAnimationFrame(drawLoop); return; }
+function draw(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  if(!r.width){animFrame=requestAnimationFrame(draw);return}
   resize();
-  const cx = W * 0.48, cy = H * 0.48;
-  const orbit = Math.min(W, H) * 0.3;
-  const t = Date.now() / 3000;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Node positions
-  const nodes = AGENTS.map((a, i) => {
-    const angle = -Math.PI/2 + i * Math.PI/2;
-    return { x: cx + Math.cos(angle)*orbit, y: cy + Math.sin(angle)*orbit*0.85, r: 36, id: i };
-  });
-  const center = { x: cx, y: cy - 4, r: 42 };
-
-  // Lines
-  for (const n of nodes) {
-    ctx.strokeStyle = 'rgba(0,180,255,.06)';
-    ctx.lineWidth = .8;
-    ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(center.x, center.y); ctx.stroke();
-    const fp = (Math.sin(t + n.id*2) + 1)/2;
-    const fx = n.x + (center.x-n.x)*fp, fy = n.y + (center.y-n.y)*fp;
-    ctx.fillStyle = n.id === activeAgent ? 'rgba(0,255,136,.4)' : 'rgba(0,180,255,.15)';
-    ctx.beginPath(); ctx.arc(fx, fy, 2, 0, Math.PI*2); ctx.fill();
+  const cx=W*.48,cy=H*.48,orbit=Math.min(W,H)*.3,t=Date.now()/3000;
+  ctx.clearRect(0,0,W,H);
+  const nodes=AGENTS.map((a,i)=>{const an=-Math.PI/2+i*Math.PI/2;return{x:cx+Math.cos(an)*orbit,y:cy+Math.sin(an)*orbit*.85,r:34,id:i}});
+  const center={x:cx,y:cy-4,r:40};
+  for(const n of nodes){
+    ctx.strokeStyle='rgba(0,180,255,.05)';ctx.lineWidth=.8;
+    ctx.beginPath();ctx.moveTo(n.x,n.y);ctx.lineTo(center.x,center.y);ctx.stroke();
+    const fp=(Math.sin(t+n.id*2)+1)/2;
+    ctx.fillStyle=n.id===activeAgent?'rgba(0,255,136,.35)':'rgba(0,180,255,.12)';
+    ctx.beginPath();ctx.arc(n.x+(center.x-n.x)*fp,n.y+(center.y-n.y)*fp,2,0,Math.PI*2);ctx.fill();
   }
-
-  // Draw nodes
-  for (const n of [...nodes, center]) {
-    const isCenter = n.id === undefined;
-    const agent = isCenter ? null : AGENTS[n.id];
-    const isActive = n.id === activeAgent;
-    const pulse = isCenter ? 1 : (1 + Math.sin(Date.now()/1500 + n.id) * .05);
-    const r = n.r * pulse;
-
-    const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r*2);
-    if (isCenter) {
-      glow.addColorStop(0, `rgba(0,180,255,${isActive?.12:.06})`);
-    } else {
-      const rgb = agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';
-      glow.addColorStop(0, `rgba(${rgb},${isActive?.2:.08})`);
-    }
-    glow.addColorStop(1, 'rgba(0,180,255,0)');
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(n.x, n.y, r*2, 0, Math.PI*2); ctx.fill();
-
-    const grd = ctx.createRadialGradient(n.x-r*.2, n.y-r*.2, 0, n.x, n.y, r);
-    if (isCenter) {
-      grd.addColorStop(0, `rgba(0,180,255,${isActive?.25:.12})`);
-      grd.addColorStop(1, 'rgba(0,180,255,.04)');
-      ctx.strokeStyle = `rgba(0,180,255,${isActive?.5:.25})`;
-    } else {
-      const rgb = agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';
-      grd.addColorStop(0, `rgba(${rgb},${isActive?.35:.15})`);
-      grd.addColorStop(1, `rgba(${rgb},.04)`);
-      ctx.strokeStyle = `rgba(${rgb},${isActive?.5:.2})`;
-    }
-    ctx.fillStyle = grd; ctx.lineWidth = isActive ? 2 : 1;
-    ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-
-    if (isActive) {
-      ctx.strokeStyle = 'rgba(0,255,136,.25)'; ctx.lineWidth = 1; ctx.setLineDash([3,5]);
-      ctx.beginPath(); ctx.arc(n.x, n.y, r+5, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
-    }
-
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if (isCenter) {
-      ctx.font = '20px sans-serif'; ctx.fillText('🧠', n.x, n.y-1);
-      ctx.fillStyle = 'rgba(200,214,229,.4)'; ctx.font = '8px sans-serif'; ctx.fillText('Orchestrator', n.x, n.y+16);
-    } else {
-      ctx.font = '18px sans-serif'; ctx.fillText(agent.icon, n.x, n.y-1);
-      ctx.fillStyle = isActive ? agent.color : 'rgba(200,214,229,.35)';
-      ctx.font = isActive ? 'bold 9px sans-serif' : '8px sans-serif';
-      ctx.fillText(agent.name, n.x, n.y+r+11);
-    }
+  for(const n of[...nodes,center]){
+    const isC=n.id===undefined,agent=isC?null:AGENTS[n.id],isA=n.id===activeAgent;
+    const pulse=isC?1:(1+Math.sin(Date.now()/1500+(n.id||0))*.05),rr=n.r*pulse;
+    const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,rr*2);
+    if(isC)g.addColorStop(0,`rgba(0,180,255,${isA?.1:.05})`);
+    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';g.addColorStop(0,`rgba(${rgb},${isA?.18:.07})`)}
+    g.addColorStop(1,'rgba(0,180,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(n.x,n.y,rr*2,0,Math.PI*2);ctx.fill();
+    const gd=ctx.createRadialGradient(n.x-rr*.2,n.y-rr*.2,0,n.x,n.y,rr);
+    if(isC){gd.addColorStop(0,`rgba(0,180,255,${isA?.22:.1})`);gd.addColorStop(1,'rgba(0,180,255,.03)');ctx.strokeStyle=`rgba(0,180,255,${isA?.45:.22})`}
+    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';gd.addColorStop(0,`rgba(${rgb},${isA?.3:.12})`);gd.addColorStop(1,`rgba(${rgb},.03)`);ctx.strokeStyle=`rgba(${rgb},${isA?.45:.18})`}
+    ctx.fillStyle=gd;ctx.lineWidth=isA?1.8:1;ctx.beginPath();ctx.arc(n.x,n.y,rr,0,Math.PI*2);ctx.fill();ctx.stroke();
+    if(isA){ctx.strokeStyle='rgba(0,255,136,.2)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.arc(n.x,n.y,rr+5,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    if(isC){ctx.font='18px sans-serif';ctx.fillText('🧠',n.x,n.y-1);ctx.fillStyle='rgba(200,214,229,.35)';ctx.font='8px sans-serif';ctx.fillText('Orchestrator',n.x,n.y+15)}
+    else{ctx.font='17px sans-serif';ctx.fillText(agent.icon,n.x,n.y-1);ctx.fillStyle=isA?agent.color:'rgba(200,214,229,.3)';ctx.font=isA?'bold 9px sans-serif':'8px sans-serif';ctx.fillText(agent.name,n.x,n.y+rr+10)}
   }
-
-  animFrame = requestAnimationFrame(drawLoop);
+  animFrame=requestAnimationFrame(draw);
 }
-drawLoop();
+draw();
 
-// ========== Agent Strip ==========
-const strip = document.getElementById('agentStrip');
-AGENTS.forEach(a => {
-  const div = document.createElement('div');
-  div.className = 'agent-chip';
-  div.dataset.id = a.id;
-  div.innerHTML = `<span class="chip-dot" style="background:${a.color}"></span><span class="chip-name">${a.icon} ${a.name}</span><span class="chip-status">空闲</span>`;
-  strip.appendChild(div);
+// Agent strip
+const strip=document.getElementById('agentStrip');
+AGENTS.forEach(a=>{
+  const d=document.createElement('div');d.className='agent-chip';
+  d.innerHTML=`<span class="dot" style="background:${a.color}"></span><span>${a.icon} ${a.name}</span>`;
+  strip.appendChild(d);
 });
-
-function setAgentStatus(id, status) {
-  const chips = strip.querySelectorAll('.agent-chip');
-  const chip = chips[id];
-  if (!chip) return;
-  const dot = chip.querySelector('.chip-dot');
-  const text = chip.querySelector('.chip-status');
-  dot.className = 'chip-dot';
-  if (status === 'busy') { dot.classList.add('busy'); text.textContent = '工作中...'; }
-  else { text.textContent = '空闲'; }
+function flashAgent(id){
+  activeAgent=id;
+  strip.querySelectorAll('.agent-chip').forEach((c,i)=>{c.style.borderColor=i===id?AGENTS[id].color:'';c.style.background=i===id?AGENTS[id].color+'15':''});
 }
-
-function flashAgent(id) {
-  activeAgent = id;
-  const chips = strip.querySelectorAll('.agent-chip');
-  chips.forEach((c, i) => {
-    c.style.borderColor = i === id ? AGENTS[id].color : '';
-    c.style.background = i === id ? AGENTS[id].color + '15' : '';
-  });
-}
-
-function clearAgentFlash() {
-  activeAgent = -1;
-  strip.querySelectorAll('.agent-chip').forEach(c => {
-    c.style.borderColor = ''; c.style.background = '';
-  });
-}
+function clearFlash(){activeAgent=-1;strip.querySelectorAll('.agent-chip').forEach(c=>{c.style.borderColor='';c.style.background=''})}
 
 // ========== Chat ==========
-const chatMessages = document.getElementById('chatMessages');
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const typing = document.getElementById('typing');
+const chatMsgs=document.getElementById('chatMsgs');
+const chatInp=document.getElementById('chatInp');
+const sendBtn=document.getElementById('sendBtn');
+const typing=document.getElementById('typing');
+const apiStatus=document.getElementById('apiStatus');
 
-function addMessage(type, content) {
-  const div = document.createElement('div');
-  div.className = `msg ${type}`;
-  const avatar = type === 'user' ? '👤' : '🧠';
-  const avatarBg = type === 'user' ? 'rgba(0,180,255,.15)' : 'rgba(0,255,136,.1)';
-  div.innerHTML = `<div class="avatar" style="background:${avatarBg}">${avatar}</div><div class="bubble">${content}</div>`;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  return div;
+function addMsg(type,html){
+  const d=document.createElement('div');d.className=`msg ${type}`;
+  const av=type==='user'?'👤':'🧠',bg=type==='user'?'rgba(0,180,255,.15)':'rgba(0,255,136,.1)';
+  d.innerHTML=`<div class="av" style="background:${bg}">${av}</div><div class="bub">${html}</div>`;
+  chatMsgs.appendChild(d);chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  return d;
 }
 
-function addReasoningMessage(steps, conclusion) {
-  const div = document.createElement('div');
-  div.className = 'msg system';
-  
-  let html = `<div class="avatar" style="background:rgba(0,255,136,.1)">🧠</div><div class="bubble"><div style="font-size:12px;color:rgba(200,214,229,.4);margin-bottom:6px">⚡ 多 Agent 协同推理过程</div>`;
-  
-  html += `<div class="reasoning">`;
-  steps.forEach((s, i) => {
-    const agent = AGENTS[s.agent];
-    const toolText = s.tool !== 'null' ? `<span class="rtool">🔧 ${s.tool}</span>` : '';
-    html += `<div class="rstep" style="animation-delay:${i*0.15}s">
-      <span class="rnum" style="background:${agent.color}22;color:${agent.color}">${i+1}</span>
-      <span><span class="ragent" style="color:${agent.color}">${agent.icon} ${agent.name}</span>
-      ${toolText ? `<span class="rarrow">◆</span> ${toolText}` : ''}
-      <div class="rmsg">${s.msg}</div></span>
-    </div>`;
+function addResultMsg(steps,conclusion,agentsUsed,toolCount,elapsed){
+  const d=document.createElement('div');d.className='msg sys';
+  let html=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub"><div style="font-size:12px;color:rgba(200,214,229,.35);margin-bottom:6px">⚡ 多 Agent 协同推理</div><div class="steps">`;
+  steps.forEach((s,i)=>{
+    const a=AGENTS.find(x=>x.name===s.agent)||AGENTS[0];
+    const toolText=s.tool?s.tool:'';
+    html+=`<div class="step" style="animation-delay:${i*.12}s"><span class="sn" style="background:${a.color}22;color:${a.color}">${i+1}</span><span><span class="sa" style="color:${a.color}">${a.icon} ${s.agent}</span>${toolText?` <span class="st">◆ ${toolText}</span>`:''}<div class="sm">${s.msg}</div></span></div>`;
   });
-  html += `</div>`;
-  html += `<div class="conclusion">${conclusion}</div>`;
-  html += `</div>`;
-  
-  div.innerHTML = html;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  return div;
+  html+=`</div><div class="conc">${conclusion}</div><div class="meta"><span>🤖 ${agentsUsed.join('、')}</span><span>🔧 ${toolCount} 次调用</span><span>⏱ ${elapsed}s</span></div></div>`;
+  d.innerHTML=html;chatMsgs.appendChild(d);chatMsgs.scrollTop=chatMsgs.scrollHeight;
 }
 
-function matchScenario(text) {
-  if (text.includes('通风') || text.includes('作业条件') || (text.includes('满足') && (text.includes('条件') || text.includes('作业')))) return '通风';
-  if (text.includes('粮情') || text.includes('异常') || text.includes('变化') || text.includes('温度') || text.includes('湿度')) return '粮情';
-  if (text.includes('出入库') || text.includes('入库') || text.includes('出库') || text.includes('车辆') || text.includes('今天业务')) return '出入库';
-  if (text.includes('熏蒸') || text.includes('虫害') || text.includes('杀虫')) return '熏蒸';
-  return null;
-}
+function showTyping(){typing.classList.add('show')}
+function hideTyping(){typing.classList.remove('show')}
 
-async function handleSend() {
-  const text = chatInput.value.trim();
-  if (!text) return;
-  chatInput.value = '';
-  sendBtn.disabled = true;
-  
-  // Add user message
-  addMessage('user', text);
-  
-  // Show typing
-  typing.classList.add('active');
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  
-  // Determine scenario
-  const scenarioKey = matchScenario(text) || '默认';
-  const scenario = SCENARIOS[scenarioKey];
-  
-  // Simulate step-by-step reasoning with delays
-  await sleep(600);
-  
-  // Show reasoning message with all steps
-  typing.classList.remove('active');
-  
-  // Simulate each agent being called
-  const uniqueAgents = [...new Set(scenario.steps.map(s => s.agent))];
-  for (const agentId of uniqueAgents) {
-    setAgentStatus(agentId, 'busy');
-    flashAgent(agentId);
-    await sleep(800);
-    setAgentStatus(agentId, 'idle');
+// ========== API Call ==========
+async function ask(query){
+  if(!query.trim())return;
+  addMsg('user',query);
+  chatInp.value='';sendBtn.disabled=true;showTyping();
+
+  try{
+    const res=await fetch(API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query})
+    });
+    hideTyping();
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+
+    // Flash agents
+    const uniqueAgents=[...new Set(data.processes.flatMap(p=>p.agents))];
+    for(const name of uniqueAgents){
+      const a=AGENTS.find(x=>x.name===name);
+      if(a){flashAgent(a.id);await new Promise(r=>setTimeout(r,600))}
+    }
+    clearFlash();
+
+    // Extract steps for display
+    const steps=[];
+    data.processes.forEach(p=>{
+      p.results.forEach(r=>{
+        r.tool_calls.forEach(tc=>{
+          steps.push({agent:r.agent,tool:tc.tool,msg:tc.output.substring(0,80)});
+        });
+        // Add a summary step
+        steps.push({agent:r.agent,tool:'',msg:`${r.success?'✅':'❌'} 执行完成 (${r.elapsed}s)`});
+      });
+    });
+
+    const totalElapsed=data.processes.reduce((sum,p)=>sum+Math.max(...p.results.map(r=>r.elapsed||0)),0);
+    addResultMsg(
+      steps.slice(-10), // last 10 steps for readability
+      data.answer,
+      data.agents_used,
+      data.tool_calls_count,
+      totalElapsed.toFixed(1)
+    );
+  }catch(e){
+    hideTyping();
+    addMsg('sys',`<div style="color:#ff6b6b">❌ 请求失败: ${e.message}<br><br><span style="font-size:12px;color:rgba(200,214,229,.4)">确保后端已启动: <b>uvicorn src.api.server:app --reload --port 8000</b></span></div>`);
   }
-  await sleep(300);
-  clearAgentFlash();
-  
-  addReasoningMessage(scenario.steps, scenario.conclusion);
-  sendBtn.disabled = false;
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  sendBtn.disabled=false;
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Event listeners
-sendBtn.addEventListener('click', handleSend);
-chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+// Events
+sendBtn.addEventListener('click',()=>ask(chatInp.value));
+chatInp.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInp.value)});
 
 // Quick questions
-const quickQs = [
-  { text: '🌡 S-07仓满足通风条件吗？', scenario: '通风' },
-  { text: '📊 最近粮情有什么异常？', scenario: '粮情' },
-  { text: '🚛 今天出入库情况如何？', scenario: '出入库' },
-  { text: '🐛 S-03仓需要熏蒸吗？', scenario: '熏蒸' },
-];
-
-const qsContainer = document.getElementById('quickQs');
-quickQs.forEach(q => {
-  const chip = document.createElement('span');
-  chip.className = 'qchip';
-  chip.textContent = q.text;
-  chip.addEventListener('click', () => {
-    chatInput.value = q.text;
-    handleSend();
-  });
-  qsContainer.appendChild(chip);
+const Qs=[{t:'🌡 S-07满足通风条件？'},{t:'📊 最近粮情有什么异常？'},{t:'🚛 今天出入库情况？'},{t:'📋 生成今日库存日报'},{t:'🐛 S-03需要熏蒸吗？'}];
+const qsEl=document.getElementById('quickQs');
+Qs.forEach(q=>{
+  const c=document.createElement('span');c.className='qc';c.textContent=q.t;
+  c.addEventListener('click',()=>ask(q.t));qsEl.appendChild(c);
 });
 
-// Welcome message
-addMessage('system', '👋 欢迎使用粮库仓储多智能体系统！<br><br>你可以询问粮情状态、作业条件判断、出入库情况等，系统会自动调度多个 Agent 协同分析。<br><br>💡 试试点击下方的快捷问题，或直接输入你的问题。');
+// Welcome
+addMsg('sys','👋 欢迎使用粮库多智能体系统！<br><br>输入问题或点击快捷按钮，系统会通过 <b>DeepSeek API</b> 调度多个 Agent 并行分析。<br><br><span style="font-size:12px;color:rgba(200,214,229,.25)">💡 确保后端已启动: <code>uvicorn src.api.server:app --reload --port 8000</code></span>');
+
+// Check backend health
+fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'ping'})})
+  .then(r=>r.ok?apiStatus.textContent='后端已连接 ✅':apiStatus.textContent='后端异常')
+  .catch(()=>apiStatus.textContent='后端未连接 ❌');
 </script>
 </body>
 </html>
