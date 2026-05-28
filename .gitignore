@@ -1,0 +1,9 @@
+# 环境变量文件（含 API key）— 不要提交！
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
