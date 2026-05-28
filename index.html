@@ -63,7 +63,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .step .st{color:rgba(0,180,255,.5);font-size:11px}
 .step .sm{color:rgba(200,214,229,.65)}
 @keyframes fs{to{opacity:1}}
-
+.thinking-dots{color:rgba(200,214,229,.4);font-size:12px;animation:pulse 1.5s infinite}
 .sys .conc{margin-top:8px;padding:8px 12px;border-radius:6px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.12);font-size:13px;color:#8fecb0;line-height:1.6}
 .sys .conc::before{content:'✅ ';color:#00ff88;font-weight:600}
 .sys .meta{display:flex;gap:10px;margin-top:6px;font-size:11px;color:rgba(200,214,229,.25)}
@@ -287,17 +287,35 @@ async function ask(query){
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             }
             case 'tool_calls':
+              {const te=document.getElementById('thinkInd');if(te)te.remove();}
               for(const tc of ev.calls)
                 addStep('🔧','transparent','rgba(0,180,255,.4)','',`${tc.tool}(${tc.input})`,'rgba(0,180,255,.5)');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             case 'agent_done':
               clearFlash();
+              {const te=document.getElementById('thinkInd');if(te)te.remove();}
               addStep('✓','rgba(0,255,136,.1)','#00ff88','',`${ev.agent} 完成 (${ev.elapsed}s, ${ev.tool_count}次)`,'rgba(200,214,229,.4)');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
+            case 'thinking':{
+              // 显示或更新思考中指示器（持续动画直到下个事件覆盖）
+              let tip=document.getElementById('thinkInd');
+              if(!tip){
+                tip=document.createElement('div');tip.id='thinkInd';tip.className='step';tip.style.animationDelay='0s';
+                stepsEl.appendChild(tip);
+              }
+              const a=AGENTS.find(x=>x.name===ev.agent);
+              const taskText=ev.task?' · '+ev.task:'';
+              tip.innerHTML=`<span class="sn" style="background:${a?a.color+'22':'rgba(0,180,255,.1)'};color:${a?a.color:'#00d4ff'}">⏳</span><span><span class="sa" style="color:${a?a.color:'#00d4ff'}">${ev.agent}</span><span class="thinking-dots">${taskText}</span></span>`;
+              if(a)flashAgent(a.id);
+              chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
+            }
             case 'agent_error':
+              // 移除 thinking 指示器
+              const te=document.getElementById('thinkInd');if(te)te.remove();
               addStep('✗','rgba(255,50,50,.1)','#ff4757','',`${ev.agent}: ${ev.error}`,'#ff4757');
               break;
             case 'conclusion':
+              {const te=document.getElementById('thinkInd');if(te)te.remove();}
               concEl.style.display='block';
               concEl.innerHTML=renderMd(ev.text);
               chatMsgs.scrollTop=chatMsgs.scrollHeight;
