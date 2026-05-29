@@ -57,6 +57,22 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 /* Right: Chat */
 .chat-panel{flex:1;display:flex;flex-direction:column;min-width:0}
 .chat-msgs{flex:1;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:14px;position:relative}
+/* DAG Panel */
+.dag-panel{display:none;position:absolute;top:10px;right:10px;z-index:50;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;width:240px;max-height:300px;overflow-y:auto;font-size:11px;backdrop-filter:blur(8px)}
+.dag-panel.show{display:block;animation:in .3s}
+.dag-panel .dag-title{font-size:11px;color:var(--text2);margin-bottom:8px;letter-spacing:.5px}
+.dag-node{display:flex;align-items:center;gap:8px;padding:4px 0;position:relative}
+.dag-node::before{content:'';position:absolute;left:7px;top:20px;width:2px;height:16px;background:var(--border2)}
+.dag-node:last-child::before{display:none}
+.dag-node .d-icon{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
+.dag-node .d-icon.pending{background:var(--border2);color:var(--text2)}
+.dag-node .d-icon.running{background:rgba(64,200,255,.2);color:#40c8ff;animation:pulse 1s infinite}
+.dag-node .d-icon.done{background:rgba(64,255,160,.15);color:#40ffa0}
+.dag-node .d-icon.err{background:rgba(255,80,80,.15);color:#ff5050}
+.dag-node .d-text{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dag-node .d-text.active{color:var(--text);font-weight:600}
+.dag-node .d-text.done{color:rgba(64,255,160,.7)}
+.dag-node .d-stat{font-size:10px;color:var(--text2);margin-left:auto}
 
 .chat-msgs::-webkit-scrollbar{width:4px}
 .chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,180,255,.15);border-radius:2px}
@@ -161,8 +177,16 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
   <div class="splitter" id="splitter"></div>
   <div class="chat-panel">
-    <div class="chat-msgs" id="chatMsgs"></div>
-    <div class="quick" id="quickQs"></div>
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="dag-panel" id="dagPanel">
+        <div class="dag-title">⚡ 推理链路</div>
+        <div id="dagNodes"></div>
+      </div>
+    </div>
+    <div class="quick" id="quickQs">
+      <span class="qc" data-q="对比 DeepSeek vs GLM-5 分析S-07粮情">🔄 模型对比</span>
+      <span class="qc" data-q="如果S-07温度升到40°C会怎样？推演后果">🔮 模拟推演</span>
+    </div>
     <div class="inp">
       <input id="chatInp" placeholder="输入问题，例如：S-07仓是否满足通风条件？" autofocus>
       <button id="sendBtn">发送</button>
@@ -482,6 +506,89 @@ function startDebate(q){
   });
 }
 
+// ========== DAG Panel ==========
+let dagSteps=[];
+function resetDag(){dagSteps=[];document.getElementById('dagNodes').innerHTML='';document.getElementById('dagPanel').classList.remove('show')}
+function updateDag(type,data){
+  const el=document.getElementById('dagNodes');
+  if(!el)return;
+  if(type==='plan'){resetDag();document.getElementById('dagPanel').classList.add('show')}
+  if(type==='agent_start'){
+    dagSteps.push({icon:'▶',cls:'running',text:data.agent,stat:'运行中'});
+    renderDag(el);
+  }
+  if(type==='tool_calls'&&data.calls){
+    for(const tc of data.calls){
+      dagSteps.push({icon:'🔧',cls:'running',text:tc.tool,stat:tc.input});
+      renderDag(el);
+    }
+  }
+  if(type==='agent_done'){
+    const idx=dagSteps.findLastIndex(s=>s.text===data.agent||s.cls==='running');
+    if(idx>=0){dagSteps[idx].icon='✓';dagSteps[idx].cls='done';dagSteps[idx].stat=`${data.elapsed}s`}
+    renderDag(el);
+  }
+  if(type==='conclusion'){
+    dagSteps.push({icon:'✅',cls:'done',text:'最终结论',stat:''});
+    renderDag(el);
+  }
+}
+function renderDag(el){
+  el.innerHTML=dagSteps.map(s=>`<div class="dag-node"><span class="d-icon ${s.cls}">${s.icon}</span><span class="d-text ${s.cls}">${s.text}</span><span class="d-stat">${s.stat}</span></div>`).join('');
+}
+
+// ========== 模型对比 & 模拟推演 ==========
+let isComparing=false;
+async function askCompare(query){
+  if(isComparing)return;isComparing=true;
+  addMsg('user',`🔄 对比模式: ${query}`);
+  const models=['deepseek-chat','glm-5'];
+  const labels=['DeepSeek','GLM-5'];
+  const container=document.createElement('div');container.className='msg sys';
+  container.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub"><div style="display:flex;gap:12px" id="compareContainer"></div></div>`;
+  chatMsgs.appendChild(container);
+  const cc=document.getElementById('compareContainer');
+  for(let i=0;i<2;i++){
+    const side=document.createElement('div');side.style.cssText='flex:1;border:1px solid var(--border);border-radius:8px;padding:10px';
+    side.innerHTML=`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">${labels[i]} <span id="cstat${i}" style="float:right">⏳</span></div><div id="cresult${i}" style="font-size:12px;line-height:1.5;color:var(--text2)">等待中...</div>`;
+    cc.appendChild(side);
+    // Fire request
+    (async(idx)=>{
+      try{
+        const res=await fetch(API_STREAM,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query,model:models[idx]})});
+        const reader=res.body.getReader();const decoder=new TextDecoder();let buf='';
+        document.getElementById(`cstat${idx}`).textContent='⏳';
+        while(true){
+          const {done,value}=await reader.read();if(done)break;
+          buf+=decoder.decode(value,{stream:true});
+          for(const part of buf.split('\n\n')){
+            if(!part.startsWith('data: '))continue;
+            try{
+              const ev=JSON.parse(part.slice(6));
+              if(ev.type==='conclusion'){
+                document.getElementById(`cresult${idx}`).innerHTML=renderMd(ev.text.substring(0,500));
+                document.getElementById(`cstat${idx}`).textContent='✅';
+              }
+            }catch(e){}
+          }
+          buf='';
+        }
+      }catch(e){document.getElementById(`cresult${idx}`).textContent='❌ 失败';document.getElementById(`cstat${idx}`).textContent='❌';}
+    })(i);
+  }
+  isComparing=false;
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+}
+
+// Override quick question clicks
+document.querySelectorAll('.qc[data-q]').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const q=el.dataset.q;
+    if(q.startsWith('对比')) askCompare(q.replace('对比 ',''));
+    else chatInp.value=q;ask(q);
+  });
+});
+
 // ========== API Call (Streaming SSE) ==========
 async function ask(query){
   if(!query.trim())return;
@@ -537,19 +644,21 @@ let currentRid='';
               addStep(`S${ev.step}`,'rgba(0,255,136,.1)','#00ff88','',`${ev.mode} · ${ev.desc}`,'#00ff88');
               break;
             case 'agent_start':{
-              const a=AGENTS.find(x=>x.name===ev.agent);
+              updateDag('agent_start',ev);const a=AGENTS.find(x=>x.name===ev.agent);
               addStep('▶',a?a.color+'22':'rgba(0,180,255,.1)',a?a.color:'#00d4ff',ev.agent,ev.task,a?a.color:'#00d4ff');
               if(a)flashAgent(a.id);
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             }
             case 'tool_calls':
               if(thinkInd){thinkInd.remove();thinkInd=null;}
+              updateDag('tool_calls',ev);
               for(const tc of ev.calls)
                 addStep('🔧','transparent','rgba(0,180,255,.4)','',`${tc.tool}(${tc.input})`,'rgba(0,180,255,.5)');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             case 'agent_done':
               clearFlash();
               if(thinkInd){thinkInd.remove();thinkInd=null;}
+              updateDag('agent_done',ev);
               addStep('✓','rgba(0,255,136,.1)','#00ff88','',`${ev.agent} 完成 (${ev.elapsed}s, ${ev.tool_count}次)`,'rgba(200,214,229,.4)');
               showTyping('✅ '+ev.agent+' 完成');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
@@ -572,6 +681,7 @@ let currentRid='';
             case 'conclusion':
               hideTyping();
               if(thinkInd){thinkInd.remove();thinkInd=null;}
+              updateDag('conclusion',ev);
               concEl.style.display='block';
               concEl.innerHTML=renderMd(ev.text);
               // 加 DAG 按钮
