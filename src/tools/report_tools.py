@@ -57,7 +57,7 @@ class QueryTrendTool(BaseTool):
     args_schema:Type[BaseModel]=TrendInput
     def _run(self,silo_id:str="",days:int=7)->str:
         r=query_grain_trend(silo_id or None,days); t=r["temperature"]; h=r["humidity"]
-        return f"📈 {r['period']}趋势 - {r['silo_id']}\n🌡 {t['avg']}°C(↑{t['max']}/↓{t['min']}) {t['trend']}\n💧 {h['avg']}%RH {h['trend']}\n{'⚠️高温'if t['anomaly']else'✅正常'}"
+        return f"📈 {r['period']}趋势 - {r['silo_id']}\n🌡 {t['avg']}°C(↑{t['max']}/↓{t['min']}) {t['trend']}\n💧 {h['avg']}%RH {h['trend']}\n{'⚠️高温'if t.get('anomaly')else'✅正常'}"
     async def _arun(self,silo_id:str="",days:int=7)->str: return self._run(silo_id,days)
 
 class ReportInput(BaseModel):
