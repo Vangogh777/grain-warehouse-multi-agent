@@ -145,10 +145,36 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </head>
 <body>
 
+<!-- Login Overlay -->
+<div id="loginOverlay" style="position:fixed;inset:0;z-index:9999;background:#080c1a;display:flex;align-items:center;justify-content:center;font-family:'Segoe UI','PingFang SC',sans-serif">
+  <div style="background:rgba(16,24,48,.85);border:1px solid rgba(0,180,255,.12);border-radius:16px;padding:36px 40px;width:380px;backdrop-filter:blur(16px);box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:36px;margin-bottom:8px">🌾</div>
+      <div style="font-size:20px;font-weight:700;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent">粮库多智能体系统</div>
+      <div style="font-size:12px;color:rgba(200,214,229,.3);margin-top:4px">Grain Storage Multi-Agent System</div>
+    </div>
+    <div id="loginForm">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">管理员登录</div>
+      <input id="loginUser" placeholder="用户名" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,180,255,.12);background:rgba(8,12,26,.6);color:#c8d6e5;font-size:13px;outline:none;margin-bottom:10px;transition:.2s" onfocus="this.style.borderColor='rgba(0,180,255,.3)'" onblur="this.style.borderColor='rgba(0,180,255,.12)'">
+      <input id="loginPass" type="password" placeholder="密码" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,180,255,.12);background:rgba(8,12,26,.6);color:#c8d6e5;font-size:13px;outline:none;margin-bottom:16px;transition:.2s" onfocus="this.style.borderColor='rgba(0,180,255,.3)'" onblur="this.style.borderColor='rgba(0,180,255,.12)'">
+      <button onclick="doLogin()" style="width:100%;padding:10px;border:none;border-radius:8px;background:linear-gradient(135deg,#40c8ff,#0090dd);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;margin-bottom:10px" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">登 录</button>
+      <div id="loginError" style="color:#ff6b6b;font-size:12px;text-align:center;display:none;margin-bottom:10px"></div>
+      <div style="text-align:center;position:relative;margin:14px 0"><span style="background:rgba(16,24,48,.85);padding:0 12px;font-size:11px;color:rgba(200,214,229,.2);position:relative;z-index:1">或</span><div style="border-top:1px solid rgba(0,180,255,.06);margin-top:-8px"></div></div>
+      <button onclick="doGuest()" style="width:100%;padding:10px;border:1px solid rgba(0,180,255,.1);border-radius:8px;background:transparent;color:rgba(200,214,229,.5);font-size:13px;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='rgba(0,180,255,.25)'" onmouseout="this.style.borderColor='rgba(0,180,255,.1)'">👤 游客模式（10次对话）</button>
+    </div>
+    <div id="loginStatus" style="display:none;text-align:center;padding:12px">
+      <div style="font-size:28px;margin-bottom:6px" id="loginIcon">✅</div>
+      <div style="font-size:14px;font-weight:600;color:#c8d6e5" id="loginMsg">登录成功</div>
+      <div style="font-size:11px;color:rgba(200,214,229,.3);margin-top:4px" id="loginSub"></div>
+    </div>
+  </div>
+</div>
+
 <div class="header">
   <h1>🌾 粮库多智能体系统</h1>
-  <div class="status"><span class="dot-live"></span> 运行中 · <span class="key" id="apiStatus">后端未连接</span> · <a href="dashboard.html" style="color:rgba(0,180,255,.5);text-decoration:none;font-size:11px;margin-left:4px">🌐 3D 大屏</a></div>
+  <div class="status"><span class="dot-live"></span> 运行中 · <span class="key" id="apiStatus">后端未连接</span> · <a href="dashboard.html" style="color:rgba(0,180,255,.5);text-decoration:none;font-size:11px;margin-left:4px">🌐 3D 大屏</a><span id="guestCount" style="display:none;margin-left:8px;padding:1px 6px;border-radius:4px;background:rgba(255,165,0,.1);color:#ffa500;font-size:10px"></span></div>
   <div id="themeToggle" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;background:rgba(0,180,255,.06);border:1px solid rgba(0,180,255,.08);margin-left:6px;transition:.2s;flex-shrink:0" onclick="switchTheme()" title="切换主题">🌙</div>
+  <div id="logoutBtn" style="display:none;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;background:rgba(255,80,80,.06);border:1px solid rgba(255,80,80,.08);margin-left:6px;transition:.2s;flex-shrink:0" onclick="doLogout()" title="退出登录">🚪</div>
 </div>
 
 <div class="main">
@@ -882,6 +908,125 @@ function submitDebate(){
   closeDebateModal();
   startDebate(q);
 }
+</script>
+<script>
+// ========== Login System ==========
+const ADMIN_USER = 'admin', ADMIN_PASS = 'admin';
+const GUEST_MAX = 10;
+let auth = null, guestCount = 0;
+
+function getAuth(){try{return JSON.parse(localStorage.getItem('grainAuth'))}catch(e){return null}}
+function setAuth(a){localStorage.setItem('grainAuth',JSON.stringify(a));auth=a}
+function clearAuth(){localStorage.removeItem('grainAuth');auth=null}
+
+function showLogin(){document.getElementById('loginOverlay').style.display='flex'}
+function hideLogin(){document.getElementById('loginOverlay').style.display='none'}
+
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value.trim();
+  const err=document.getElementById('loginError');
+  if(u===ADMIN_USER && p===ADMIN_PASS){
+    setAuth({type:'admin',user:u});
+    showStatus('✅','管理员 '+u,'完整权限');
+    setTimeout(hideLogin,1000);
+    document.getElementById('logoutBtn').style.display='flex';
+    document.getElementById('guestCount').style.display='none';
+  }else{
+    err.textContent='❌ 用户名或密码错误';err.style.display='block';
+    setTimeout(()=>err.style.display='none',2500);
+  }
+}
+
+function doGuest(){
+  setAuth({type:'guest',count:0});
+  showStatus('👤','游客模式',`剩余 ${GUEST_MAX} 次对话`);
+  setTimeout(hideLogin,1000);
+  document.getElementById('logoutBtn').style.display='flex';
+  document.getElementById('guestCount').style.display='inline';
+  updateGuestCount();
+}
+
+function showStatus(icon,msg,sub){
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('loginStatus').style.display='block';
+  document.getElementById('loginIcon').textContent=icon;
+  document.getElementById('loginMsg').textContent=msg;
+  document.getElementById('loginSub').textContent=sub;
+}
+
+function updateGuestCount(){
+  const el=document.getElementById('guestCount');
+  if(auth&&auth.type==='guest'){
+    const remain=GUEST_MAX-auth.count;
+    el.textContent=`👤 剩余 ${remain} 次`;
+    el.style.display='inline';
+    if(remain<=2)el.style.background='rgba(255,80,80,.1)';
+  }else{el.style.display='none'}
+}
+
+function checkGuestLimit(){
+  if(!auth||auth.type!=='guest')return false;
+  if(auth.count>=GUEST_MAX){
+    alert('👤 游客对话次数已用完（10/10），请联系管理员或刷新页面重新开始。');
+    doLogout();
+    return true;
+  }
+  return false;
+}
+
+function incrementGuestCount(){
+  if(auth&&auth.type==='guest'){
+    auth.count+=1;setAuth(auth);updateGuestCount();
+  }
+}
+
+function doLogout(){
+  clearAuth();
+  document.getElementById('logoutBtn').style.display='none';
+  document.getElementById('guestCount').style.display='none';
+  location.reload();
+}
+
+// Override ask() to check guest limit
+const _origAsk = window.ask;
+window.ask = function(q){
+  if(!q.trim())return;
+  if(!auth){showLogin();return}
+  if(auth.type==='guest'&&auth.count>=GUEST_MAX){
+    alert('👤 游客对话次数已用完（10/10）。');
+    doLogout();return;
+  }
+  incrementGuestCount();
+  _origAsk(q);
+};
+
+// Init login state on load
+(function(){
+  const saved=getAuth();
+  if(saved){
+    auth=saved;
+    if(saved.type==='guest'){
+      showStatus('👤','游客模式',`剩余 ${GUEST_MAX-saved.count} 次对话`);
+      document.getElementById('logoutBtn').style.display='flex';
+      document.getElementById('guestCount').style.display='inline';
+      updateGuestCount();
+    }else{
+      showStatus('✅','管理员 '+saved.user,'完整权限');
+      document.getElementById('logoutBtn').style.display='flex';
+    }
+    setTimeout(hideLogin,800);
+  }
+})();
+
+// Enter key triggers login
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&document.getElementById('loginOverlay').style.display!=='none'){
+    const u=document.getElementById('loginUser');
+    const p=document.getElementById('loginPass');
+    if(document.activeElement===u||document.activeElement===p)doLogin();
+  }
+});
 </script>
 </body>
 </html>
