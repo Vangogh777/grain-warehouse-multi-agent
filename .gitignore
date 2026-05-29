@@ -15,5 +15,8 @@ __pycache__/
 .trace.db
 .tiktoken_cache/
 
+# 记忆备份文件（git-tracked，手动导出）
+# memory_backup.json
+
 # IDE
 .reasonix/
