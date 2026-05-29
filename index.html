@@ -27,12 +27,12 @@
 [data-theme="light"] .msg.sys .conc{background:rgba(0,180,100,.06);border-color:rgba(0,180,100,.12);color:#1a6b44}
 [data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,80,160,.2)!important}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden;font-size:15px}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid)1px,transparent 1px),linear-gradient(90deg,var(--grid)1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:0}
 
-.header{position:relative;z-index:10;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--bg2);backdrop-filter:blur(12px)}
-.header h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.header{position:relative;z-index:10;padding:16px 30px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--bg2);backdrop-filter:blur(12px)}
+.header h1{font-size:20px;font-weight:700;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
 .dot-live{width:7px;height:7px;border-radius:50%;background:#40ffa0;box-shadow:0 0 12px #40ffa088;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .status .key{color:var(--text2);font-size:11px}
@@ -40,14 +40,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .main{position:relative;z-index:1;display:flex;height:calc(100vh - 54px)}
 
 /* Left: Agent Network */
-.network-panel{width:380px;min-width:200px;max-width:600px;display:flex;flex-direction:column;padding:14px;gap:10px;border-right:none}
+.network-panel{width:460px;min-width:220px;max-width:750px;display:flex;flex-direction:column;padding:18px;gap:14px;border-right:none}
 
 /* Drag handle */
 .splitter{width:4px;cursor:col-resize;background:var(--border2);flex-shrink:0;position:relative;transition:background .2s}
 .splitter:hover,.splitter.active{background:var(--border)}
 .splitter::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:32px;background:rgba(0,180,255,.15);border-radius:2px;transition:background .2s}
 .splitter:hover::after,.splitter.active::after{background:rgba(0,180,255,.4)}
-.panel-title{font-size:11px;color:rgba(200,214,229,.5);letter-spacing:1px}
+.panel-title{font-size:12px;color:var(--text2);letter-spacing:1px;font-weight:600}
 .network-canvas-wrap{flex:1;background:var(--bg);border-radius:12px;border:1px solid var(--border);overflow:hidden;min-height:200px}
 .network-canvas-wrap canvas{width:100%;height:100%;display:block}
 .agent-strip{display:flex;gap:6px}
@@ -56,7 +56,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 /* Right: Chat */
 .chat-panel{flex:1;display:flex;flex-direction:column;min-width:0}
-.chat-msgs{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:12px}
+.chat-msgs{flex:1;overflow-y:auto;padding:18px 24px;display:flex;flex-direction:column;gap:14px;position:relative}
+
 .chat-msgs::-webkit-scrollbar{width:4px}
 .chat-msgs::-webkit-scrollbar-thumb{background:rgba(0,180,255,.15);border-radius:2px}
 #historyPanel::-webkit-scrollbar{width:3px}
@@ -71,10 +72,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .msg.sys{align-self:flex-start}
 @keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-.msg .av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.msg .av{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .msg.user .av{background:rgba(0,180,255,.15)}
 .msg.sys .av{background:rgba(0,255,136,.1)}
-.msg .bub{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.7}
+.msg .bub{padding:14px 18px;border-radius:12px;font-size:15px;line-height:1.7}
 .msg.user .bub{background:rgba(0,180,255,.08);border:1px solid rgba(0,180,255,.12);color:var(--text)}
 .msg.sys .bub{background:var(--bub-bg);border:1px solid var(--border);color:var(--text)}
 .msg .bub table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12px}
@@ -103,26 +104,23 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .sys .meta{display:flex;gap:10px;margin-top:6px;font-size:11px;color:rgba(200,214,229,.25)}
 
 /* Typing */
-.typing{display:none;gap:8px;align-items:center;padding:6px 0}
+.typing{display:none;gap:10px;align-items:center;padding:12px 16px;margin-bottom:4px;align-self:flex-start;border-radius:12px;background:var(--bub-bg);border:1px solid var(--border);max-width:90%}
 .typing.show{display:flex}
-.typing .td{display:flex;gap:4px}
-.typing .td span{width:6px;height:6px;border-radius:50%;background:rgba(0,180,255,.4);animation:db 1.4s infinite}
-.typing .td span:nth-child(2){animation-delay:.2s}
-.typing .td span:nth-child(3){animation-delay:.4s}
-@keyframes db{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
-.typing .tt{font-size:12px;color:rgba(200,214,229,.25);margin-left:6px}
+.spinner{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.typing .tt{font-size:14px;color:var(--text2);font-weight:500}
 
 /* Quick questions */
 .quick{padding:6px 20px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid rgba(0,180,255,.04)}
-.quick .qc{padding:5px 12px;border-radius:14px;background:rgba(0,180,255,.05);border:1px solid var(--border);font-size:11px;color:var(--text2);cursor:pointer;transition:.2s}
+.quick .qc{padding:7px 16px;border-radius:16px;background:rgba(0,180,255,.05);border:1px solid var(--border);font-size:13px;color:var(--text2);cursor:pointer;transition:.2s}
 .quick .qc:hover{background:rgba(0,180,255,.1);color:var(--text);border-color:var(--border)}
 
 /* Input */
 .inp{display:flex;gap:8px;padding:10px 20px 14px;border-top:1px solid rgba(0,180,255,.04)}
-.inp input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:13px;outline:none;transition:.2s}
+.inp input{flex:1;padding:14px 18px;border-radius:10px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:15px;outline:none;transition:.2s}
 .inp input::placeholder{color:rgba(200,214,229,.15)}
 .inp input:focus{border-color:rgba(0,180,255,.25);box-shadow:0 0 12px rgba(0,180,255,.05)}
-.inp button{padding:10px 22px;border:none;border-radius:8px;background:linear-gradient(135deg,#00b4ff,#0090dd);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
+.inp button{padding:14px 26px;border:none;border-radius:10px;background:linear-gradient(135deg,#00b4ff,#0090dd);color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
 .inp button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,180,255,.2)}
 .inp button:disabled{opacity:.3;cursor:not-allowed;transform:none}
 
@@ -134,7 +132,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <div class="header">
   <h1>🌾 粮库多智能体系统</h1>
   <div class="status"><span class="dot-live"></span> 运行中 · <span class="key" id="apiStatus">后端未连接</span> · <a href="dashboard.html" style="color:rgba(0,180,255,.5);text-decoration:none;font-size:11px;margin-left:4px">🌐 3D 大屏</a></div>
-  <div id="themeToggle" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;background:rgba(0,180,255,.06);border:1px solid rgba(0,180,255,.08);margin-left:8px;transition:.2s;flex-shrink:0" onclick="switchTheme()" title="切换主题">🌙</div>
+  <div id="themeToggle" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;background:rgba(0,180,255,.06);border:1px solid rgba(0,180,255,.08);margin-left:6px;transition:.2s;flex-shrink:0" onclick="switchTheme()" title="切换主题">🌙</div>
 </div>
 
 <div class="main">
@@ -164,7 +162,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="splitter" id="splitter"></div>
   <div class="chat-panel">
     <div class="chat-msgs" id="chatMsgs"></div>
-    <div class="typing" id="typing"><div class="td"><span></span><span></span><span></span></div><span class="tt">Agent 协同分析中...</span></div>
     <div class="quick" id="quickQs"></div>
     <div class="inp">
       <input id="chatInp" placeholder="输入问题，例如：S-07仓是否满足通风条件？" autofocus>
@@ -176,7 +173,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <script src="https://cdn.bootcdn.net/ajax/libs/marked/11.0.0/marked.min.js"></script>
 <script>
 // ========== Config ==========
-const API_BASE = window.location.origin + '/api';
+const API_HOST = (window.location.origin === 'null' || window.location.protocol === 'file:') ? 'http://localhost:8000' : window.location.origin;
+const API_BASE = API_HOST + '/api';
 const API_URL = API_BASE + '/query';
 const API_STREAM = API_BASE + '/query/stream';
 
@@ -427,8 +425,21 @@ function addResultMsg(steps,conclusion,agentsUsed,toolCount,elapsed){
   d.innerHTML=html;chatMsgs.appendChild(d);chatMsgs.scrollTop=chatMsgs.scrollHeight;
 }
 
-function showTyping(){typing.classList.add('show')}
-function hideTyping(){typing.classList.remove('show')}
+function showTyping(msg){
+  let el=document.getElementById('typing');
+  if(!el){
+    el=document.createElement('div');el.className='typing';el.id='typing';
+    el.innerHTML='<div class="td"><div class="spinner"></div></div><span class="tt" id="typingText">🤖 Agent 分析中...</span>';
+    chatMsgs.appendChild(el);
+  }
+  el.classList.add('show');
+  if(msg)document.getElementById('typingText').textContent=msg;
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+}
+function hideTyping(){
+  const el=document.getElementById('typing');
+  if(el){el.classList.remove('show');el.remove();}
+}
 
 // ========== Debate ==========
 function startDebate(q){
@@ -463,11 +474,11 @@ function startDebate(q){
     d.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub">${renderMd(html)}</div>`;
     chatMsgs.appendChild(d);
     chatMsgs.scrollTop=chatMsgs.scrollHeight;
-    sendBtn.disabled=false;
+    sendBtn.disabled=false;sendBtn.textContent="发送";
   }).catch(e=>{
     hideTyping();
     addMsg('sys',`<div style="color:#ff6b6b">❌ 辩论失败: ${e.message}</div>`);
-    sendBtn.disabled=false;
+    sendBtn.disabled=false;sendBtn.textContent="发送";
   });
 }
 
@@ -475,7 +486,7 @@ function startDebate(q){
 async function ask(query){
   if(!query.trim())return;
   addMsg('user',query);
-  chatInp.value='';sendBtn.disabled=true;showTyping();
+  chatInp.value='';sendBtn.disabled=true;sendBtn.textContent='...';showTyping('🤔 分析问题中...');
 
   // Create streaming message container
   const sysMsg=document.createElement('div');sysMsg.className='msg sys';
@@ -540,6 +551,7 @@ let currentRid='';
               clearFlash();
               if(thinkInd){thinkInd.remove();thinkInd=null;}
               addStep('✓','rgba(0,255,136,.1)','#00ff88','',`${ev.agent} 完成 (${ev.elapsed}s, ${ev.tool_count}次)`,'rgba(200,214,229,.4)');
+              showTyping('✅ '+ev.agent+' 完成');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             case 'thinking':{
               if(!thinkInd){
@@ -548,7 +560,8 @@ let currentRid='';
               }
               const a=AGENTS.find(x=>x.name===ev.agent);
               const taskText=ev.task?' · '+ev.task:'';
-              tip.innerHTML=`<span class="sn" style="background:${a?a.color+'22':'rgba(0,180,255,.1)'};color:${a?a.color:'#00d4ff'}">⏳</span><span><span class="sa" style="color:${a?a.color:'#00d4ff'}">${ev.agent}</span><span class="thinking-dots">${taskText}</span></span>`;
+              showTyping('⏳ '+ev.agent+taskText);
+              tip.innerHTML=`<span class="sn" style="background:${a?a.color+'22':'rgba(0,180,255,.1)'};color:${a?a.color:'#00d4ff'}"><div class="spinner" style="width:10px;height:10px;border-width:1.5px;border-color:${a?a.color+'44':'rgba(0,180,255,.3)'};border-top-color:${a?a.color:'#00d4ff'}"></div></span><span><span class="sa" style="color:${a?a.color:'#00d4ff'}">${ev.agent}</span><span style="color:rgba(200,214,229,.4);font-size:11px">${taskText}</span></span>`;
               if(a)flashAgent(a.id);
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             }
@@ -557,6 +570,7 @@ let currentRid='';
               addStep('✗','rgba(255,50,50,.1)','#ff4757','',`${ev.agent}: ${ev.error}`,'#ff4757');
               break;
             case 'conclusion':
+              hideTyping();
               if(thinkInd){thinkInd.remove();thinkInd=null;}
               concEl.style.display='block';
               concEl.innerHTML=renderMd(ev.text);
@@ -571,6 +585,7 @@ let currentRid='';
               chatMsgs.scrollTop=chatMsgs.scrollHeight;
               break;
             case 'done':
+              hideTyping();sendBtn.textContent='发送';
               loadHistory();loadSessions();  // 刷新历史面板+会话列表
               const meta=document.createElement('div');
               meta.className='meta';

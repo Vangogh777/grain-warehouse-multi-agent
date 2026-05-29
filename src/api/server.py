@@ -1,8 +1,9 @@
 """FastAPI 接口 — 供前端 UI 调用（4 Agent 完整版）"""
 import json
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import sys, os
@@ -69,6 +70,15 @@ async def startup():
 async def root():
     return {"service": "粮库多智能体系统", "status": "running",
             "agents": ["粮情分析", "智能作业", "出入库", "报表分析", "质量检测"]}
+
+
+# 托管前端静态文件（通过 http://localhost:8000 访问）
+import os as _os
+_frontend_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "..")
+@app.get("/index.html")
+@app.get("/dashboard.html")
+async def serve_frontend(file: str = "index.html"):
+    return FileResponse(_os.path.join(_frontend_dir, file))
 
 
 @app.post("/api/query", response_model=QueryResponse)
