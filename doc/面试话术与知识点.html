@@ -67,10 +67,28 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 <tr><td>StateGraph</td><td>节点(Node) + 边(Edge) + 状态(State)</td></tr>
 <tr><td>条件路由</td><td>add_conditional_edges</td></tr>
 <tr><td>与 LangChain 关系</td><td>LangGraph 是 LangChain 的编排层</td></tr>
+<tr><td>LangGraph vs AgentScope</td><td>LangGraph = 状态机编排（单进程轻量）；AgentScope = 分布式运行时（阿里系）</td></tr>
 </table>
 </div>
 
-<h3>2.3 RAG 知识库 <span class="tag hf">高频</span></h3>
+<h3>2.3 LangGraph vs AgentScope（追问备选）</h3>
+<div class="card">
+<p><strong>面试官可能追问：LangGraph 和 AgentScope 有什么区别？为什么选 LangGraph？</strong></p>
+<blockquote>
+"AgentScope 是阿里达摩院的多 Agent 分布式框架，适合大规模生产部署。但我的项目是单进程多 Agent，LangGraph 更轻量，概念清晰，且 LangChain 生态的工具链更成熟。如果以后需要分布式部署，可以换成 AgentScope 或自建消息队列。"
+</blockquote>
+<p><strong>对比速记：</strong></p>
+<table>
+<tr><th>维度</th><th>LangGraph</th><th>AgentScope</th></tr>
+<tr><td>定位</td><td>状态机编排</td><td>分布式 Agent 运行时</td></tr>
+<tr><td>通信</td><td>State 共享</td><td>Msg 消息队列</td></tr>
+<tr><td>并行</td><td>0.3+ 支持</td><td>原生分布式</td></tr>
+<tr><td>社区</td><td>大（LangChain 生态）</td><td>小（主要国内）</td></tr>
+<tr><td>面试推荐</td><td>✅ 通用</td><td>阿里系可提</td></tr>
+</table>
+</div>
+
+<h3>2.4 RAG 知识库 <span class="tag hf">高频</span></h3>
 <div class="card">
 <p><strong>面试官问：RAG 怎么实现的？为什么用 Hybrid Search？</strong></p>
 <blockquote>
@@ -86,7 +104,7 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 </table>
 </div>
 
-<h3>2.4 记忆系统 <span class="tag hf">高频</span></h3>
+<h3>2.5 记忆系统 <span class="tag hf">高频</span></h3>
 <div class="card">
 <p><strong>面试官问：Agent 怎么记住之前的对话？</strong></p>
 <blockquote>
@@ -102,7 +120,7 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 </table>
 </div>
 
-<h3>2.5 Agent 辩论机制 <span class="tag tech">进阶</span></h3>
+<h3>2.6 Agent 辩论机制 <span class="tag tech">进阶</span></h3>
 <div class="card">
 <p><strong>面试官问：怎么保证 Agent 回答的准确性？</strong></p>
 <blockquote>
@@ -117,7 +135,7 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 </table>
 </div>
 
-<h3>2.6 可观测性 <span class="tag tech">进阶</span></h3>
+<h3>2.7 可观测性 <span class="tag tech">进阶</span></h3>
 <div class="card">
 <p><strong>面试官问：怎么追踪和调试 Agent 的行为？</strong></p>
 <blockquote>
@@ -132,7 +150,7 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 </table>
 </div>
 
-<h3>2.7 流式 SSE <span class="tag tech">进阶</span></h3>
+<h3>2.8 流式 SSE <span class="tag tech">进阶</span></h3>
 <div class="card">
 <p><strong>面试官问：前端怎么实时展示推理过程？</strong></p>
 <blockquote>
