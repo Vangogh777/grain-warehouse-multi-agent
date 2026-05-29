@@ -183,10 +183,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         <div id="dagNodes"></div>
       </div>
     </div>
-    <div class="quick" id="quickQs">
-      <span class="qc" data-q="对比 DeepSeek vs GLM-5 分析S-07粮情">🔄 模型对比</span>
-      <span class="qc" data-q="如果S-07温度升到40°C会怎样？推演后果">🔮 模拟推演</span>
-    </div>
+    <div class="quick" id="quickQs"></div>
     <div class="inp">
       <input id="chatInp" placeholder="输入问题，例如：S-07仓是否满足通风条件？" autofocus>
       <button id="sendBtn">发送</button>
@@ -580,15 +577,6 @@ async function askCompare(query){
   chatMsgs.scrollTop=chatMsgs.scrollHeight;
 }
 
-// Override quick question clicks
-document.querySelectorAll('.qc[data-q]').forEach(el=>{
-  el.addEventListener('click',()=>{
-    const q=el.dataset.q;
-    if(q.startsWith('对比')) askCompare(q.replace('对比 ',''));
-    else chatInp.value=q;ask(q);
-  });
-});
-
 // ========== API Call (Streaming SSE) ==========
 async function ask(query){
   if(!query.trim())return;
@@ -718,11 +706,13 @@ sendBtn.addEventListener('click',()=>ask(chatInp.value));
 chatInp.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInp.value)});
 
 // Quick questions
-const Qs=[{t:'🌡 S-07满足通风条件？'},{t:'📊 最近粮情有什么异常？'},{t:'🚛 今天出入库情况？'},{t:'📋 生成今日库存日报'},{t:'🤝 多 Agent 辩论'},{t:'🧪 S-03稻谷质量如何？'}];
+const Qs=[{t:'🌡 S-07满足通风条件？'},{t:'📊 最近粮情有什么异常？'},{t:'🚛 今天出入库情况？'},{t:'📋 生成今日库存日报'},{t:'🤝 多 Agent 辩论'},{t:'🧪 S-03稻谷质量如何？'},{t:'🔄 模型对比',cmd:'compare'},{t:'🔮 模拟推演',cmd:'simulate'}];
 const qsEl=document.getElementById('quickQs');
 Qs.forEach(q=>{
   const c=document.createElement('span');c.className='qc';c.textContent=q.t;
   c.addEventListener('click',()=>{
+    if(q.cmd==='compare'){askCompare('分析S-07粮情');return;}
+    if(q.cmd==='simulate'){chatInp.value='如果S-07温度升到40°C会怎样？推演后果';ask(chatInp.value);return;}
     if(q.t==='🤝 多 Agent 辩论'){
       chatInp.value='';
       startDebate();
