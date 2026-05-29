@@ -293,9 +293,9 @@ function buildSilos(data){
     // Label (CSS2D)
     const labelDiv = document.createElement('div');
     labelDiv.textContent = sid;
-    labelDiv.style.cssText = `color:rgba(200,214,229,.6);font-size:12px;font-weight:600;background:rgba(5,8,16,.7);padding:2px 10px;border-radius:4px;border:1px solid rgba(0,180,255,.1);backdrop-filter:blur(4px);letter-spacing:1px`;
+    labelDiv.style.cssText = `color:rgba(200,214,229,.6);font-size:11px;font-weight:600;background:rgba(5,8,16,.7);padding:1px 8px;border-radius:3px;border:1px solid rgba(0,180,255,.08);backdrop-filter:blur(4px);letter-spacing:1px`;
     const label = new CSS2DObject(labelDiv);
-    label.position.set(x, SILO_HEIGHT+1.2, z);
+    label.position.set(x, SILO_HEIGHT+1.4, z);
     scene.add(label);
 
     // Value label
@@ -303,18 +303,18 @@ function buildSilos(data){
     let valStr = currentView==='temp'?`${to1(tempVal)}°C`:currentView==='humidity'?`${to1(info.humidity)}%`:currentView==='pest'?`${to1(info.pest_density)}头/kg`:'';
     const valDiv = document.createElement('div');
     valDiv.textContent = valStr;
-    valDiv.style.cssText = `color:${color.getStyle()};font-size:14px;font-weight:700;text-shadow:0 0 10px ${color.getStyle()}44`;
+    valDiv.style.cssText = `color:${color.getStyle()};font-size:13px;font-weight:700;text-shadow:0 0 8px ${color.getStyle()}66;background:rgba(5,8,16,.6);padding:0 6px;border-radius:3px`;
     const valLabel = new CSS2DObject(valDiv);
-    valLabel.position.set(x, SILO_HEIGHT+0.3, z);
+    valLabel.position.set(x, SILO_HEIGHT+0.6, z);
     scene.add(valLabel);
 
     // Bar indicator (CSS2D)
     const fillPct = currentView==='temp'?Math.min(tempVal/45,1):currentView==='humidity'?Math.min(info.humidity/100,1):Math.min((info.pest_density||0)/15,1);
     const barDiv = document.createElement('div');
-    barDiv.style.cssText = `width:40px;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden`;
+    barDiv.style.cssText = `width:36px;height:3px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden`;
     barDiv.innerHTML = `<div style="width:${fillPct*100}%;height:100%;background:${color.getStyle()};border-radius:2px;transition:width .5s"></div>`;
     const barLabel = new CSS2DObject(barDiv);
-    barLabel.position.set(x, 0.3, z);
+    barLabel.position.set(x, -0.2, z);
     scene.add(barLabel);
 
     siloMeshes.push({mesh, label, sid, idx, data:info});
