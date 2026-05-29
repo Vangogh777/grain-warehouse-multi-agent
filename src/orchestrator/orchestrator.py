@@ -33,6 +33,7 @@ class GrainOrchestrator:
         has_fumigation = any(k in q for k in ["熏蒸", "虫害", "杀虫"])
         has_inout = any(k in q for k in ["出入库", "入库", "出库", "车辆", "业务量", "今天业务"])
         has_report = any(k in q for k in ["报表", "报告", "统计", "库存", "日报", "月报", "汇总"])
+        has_quality = any(k in q for k in ["质量", "质检", "等级", "品质", "扦样", "国标", "指标", "水分超标", "杂质"])
 
         if has_ventilation or has_fumigation:
             return "ventilation"
@@ -40,6 +41,8 @@ class GrainOrchestrator:
             return "inoutbound"
         if has_report:
             return "report"
+        if has_quality:
+            return "quality"
         if has_grain:
             return "grain_analysis"
         return "general"
@@ -188,6 +191,21 @@ class GrainOrchestrator:
             final_answer = final["output"]
             all_tool_calls = results[0].get("tool_calls", []) + results[1].get("tool_calls", []) + final.get("tool_calls", [])
 
+        # ========== 质量检测场景 ==========
+        elif scenario == "quality":
+            sid_hint = f"重点关注 {silo_id}" if silo_id else "全部仓房"
+            task = f"用户查询质量相关：{query}。请查询质检记录、分析质量状况，重点关注 {sid_hint}。"
+            result = await self._run_agent(self.agents["质量检测"], task)
+            processes.append({
+                "step": 1,
+                "agents": ["质量检测"],
+                "mode": "串行",
+                "results": [result],
+            })
+            agents_used.append("质量检测")
+            final_answer = result["output"]
+            all_tool_calls = result.get("tool_calls", [])
+
         # ========== 通用场景 ==========
         else:
             # 并行调用所有 Agent
@@ -321,6 +339,13 @@ class GrainOrchestrator:
             combined = f"报表:{ir['output'][:500]}\n粮情:{tr['output'][:500]}\n综合生成完整报告"
             fr = await self._run_agent(self.agents["报表分析"], combined)
             final = fr["output"]
+        elif scenario == "quality":
+            yield {"type": "step", "step": 1, "agents": ["质量检测"], "mode": "串行", "desc": "质检分析"}
+            agents_used.append("质量检测")
+            yield _thinking("质量检测", "查询质检数据...")
+            r = await self._run_agent(self.agents["质量检测"], f"用户查询质量相关：{query}")
+            all_tc.extend(r.get("tool_calls",[]))
+            final = r["output"]
         else:
             yield {"type": "step", "step": 1, "agents": list(self.agents.keys()), "mode": "并行", "desc": "全部 Agent"}
             for name in list(self.agents.keys()):

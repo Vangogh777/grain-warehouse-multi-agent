@@ -4,26 +4,44 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>粮库多智能体系统</title>
 <style>
+:root{
+  --bg:#0f1a2e; --bg2:#141f38; --text:#dce6f0; --text2:rgba(200,214,229,.5);
+  --border:rgba(0,180,255,.1); --border2:rgba(0,180,255,.06);
+  --bub-bg:rgba(20,35,60,.7); --inp-bg:rgba(20,35,60,.6);
+  --grid:rgba(0,180,255,.06); --accent:#40c8ff;
+}
+[data-theme="light"]{
+  --bg:#f0f4f8; --bg2:#e8eef5; --text:#1a2634; --text2:rgba(26,38,52,.5);
+  --border:rgba(0,100,180,.12); --border2:rgba(0,100,180,.08);
+  --bub-bg:rgba(255,255,255,.85); --inp-bg:rgba(255,255,255,.8);
+  --grid:rgba(0,100,180,.05); --accent:#0070c9;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#080c1a;color:#c8d6e5;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,180,255,.03)1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,.03)1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;height:100vh;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--grid)1px,transparent 1px),linear-gradient(90deg,var(--grid)1px,transparent 1px);background-size:30px 30px;pointer-events:none;z-index:0}
 
-.header{position:relative;z-index:10;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,180,255,.1);background:rgba(8,12,26,.85);backdrop-filter:blur(12px)}
-.header h1{font-size:17px;font-weight:700;background:linear-gradient(135deg,#00b4ff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header .status{display:flex;align-items:center;gap:8px;font-size:12px;color:#4a9}
-.dot-live{width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 10px #00ff8866;animation:pulse 1.5s infinite}
+.header{position:relative;z-index:10;padding:14px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);background:var(--bg2);backdrop-filter:blur(12px)}
+.header h1{font-size:18px;font-weight:700;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.dot-live{width:7px;height:7px;border-radius:50%;background:#40ffa0;box-shadow:0 0 12px #40ffa088;animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.status .key{color:rgba(200,214,229,.3);font-size:11px}
+.status .key{color:var(--text2);font-size:11px}
 
 .main{position:relative;z-index:1;display:flex;height:calc(100vh - 54px)}
 
 /* Left: Agent Network */
-.network-panel{width:380px;min-width:300px;display:flex;flex-direction:column;padding:14px;gap:10px;border-right:1px solid rgba(0,180,255,.06)}
-.panel-title{font-size:11px;color:rgba(200,214,229,.3);letter-spacing:1px}
-.network-canvas-wrap{flex:1;background:rgba(12,20,40,.4);border-radius:12px;border:1px solid rgba(0,180,255,.06);overflow:hidden;min-height:200px}
+.network-panel{width:380px;min-width:200px;max-width:600px;display:flex;flex-direction:column;padding:14px;gap:10px;border-right:none}
+
+/* Drag handle */
+.splitter{width:4px;cursor:col-resize;background:var(--border2);flex-shrink:0;position:relative;transition:background .2s}
+.splitter:hover,.splitter.active{background:var(--border)}
+.splitter::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:2px;height:32px;background:rgba(0,180,255,.15);border-radius:2px;transition:background .2s}
+.splitter:hover::after,.splitter.active::after{background:rgba(0,180,255,.4)}
+.panel-title{font-size:11px;color:rgba(200,214,229,.5);letter-spacing:1px}
+.network-canvas-wrap{flex:1;background:var(--bg);border-radius:12px;border:1px solid var(--border);overflow:hidden;min-height:200px}
 .network-canvas-wrap canvas{width:100%;height:100%;display:block}
 .agent-strip{display:flex;gap:6px}
-.agent-chip{flex:1;display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px;background:rgba(12,20,40,.5);border:1px solid rgba(0,180,255,.06);font-size:10px;transition:.2s}
+.agent-chip{flex:1;display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:10px;transition:.2s}
 .agent-chip .dot{width:5px;height:5px;border-radius:50%}
 
 /* Right: Chat */
@@ -42,7 +60,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .msg.sys .av{background:rgba(0,255,136,.1)}
 .msg .bub{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.7}
 .msg.user .bub{background:rgba(0,180,255,.12);border:1px solid rgba(0,180,255,.15);color:#e0ecff}
-.msg.sys .bub{background:rgba(12,20,40,.6);border:1px solid rgba(0,180,255,.06);color:#c8d6e5}
+.msg.sys .bub{background:var(--bub-bg);border:1px solid var(--border);color:var(--text)}
 .msg .bub table{border-collapse:collapse;width:100%;margin:6px 0;font-size:12px}
 .msg .bub th,.msg .bub td{padding:5px 8px;border:1px solid rgba(0,180,255,.1);text-align:center}
 .msg .bub th{background:rgba(0,180,255,.08);color:#00d4ff;font-weight:600}
@@ -85,7 +103,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 /* Input */
 .inp{display:flex;gap:8px;padding:10px 20px 14px;border-top:1px solid rgba(0,180,255,.04)}
-.inp input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(0,180,255,.1);background:rgba(12,20,40,.5);color:#c8d6e5;font-size:13px;outline:none;transition:.2s}
+.inp input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--inp-bg);color:var(--text);font-size:13px;outline:none;transition:.2s}
 .inp input::placeholder{color:rgba(200,214,229,.15)}
 .inp input:focus{border-color:rgba(0,180,255,.25);box-shadow:0 0 12px rgba(0,180,255,.05)}
 .inp button{padding:10px 22px;border:none;border-radius:8px;background:linear-gradient(135deg,#00b4ff,#0090dd);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:.2s}
@@ -100,15 +118,34 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <div class="header">
   <h1>🌾 粮库多智能体系统</h1>
   <div class="status"><span class="dot-live"></span> 运行中 · <span class="key" id="apiStatus">后端未连接</span> · <a href="dashboard.html" style="color:rgba(0,180,255,.5);text-decoration:none;font-size:11px;margin-left:4px">🌐 3D 大屏</a></div>
+  <div id="themeToggle" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;background:rgba(0,180,255,.06);border:1px solid rgba(0,180,255,.08);margin-left:8px;transition:.2s;flex-shrink:0" onclick="switchTheme()" title="切换主题">🌙</div>
 </div>
 
 <div class="main">
-  <div class="network-panel">
+  <div class="network-panel" id="networkPanel">
+    <div class="panel-title">🎭 角色</div>
+    <div id="roleStrip" style="display:flex;gap:6px;margin-bottom:6px"></div>
+    <div class="panel-title">🤖 模型</div>
+    <div class="model-select-wrap" style="position:relative;margin-bottom:6px">
+      <div class="model-select-trigger" id="modelTrigger" style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:8px;background:rgba(20,35,60,.6);border:1px solid rgba(0,180,255,.12);cursor:pointer;font-size:11px;transition:.2s" onclick="toggleModelList()">
+        <span id="modelLabel">DeepSeek V3 快速</span>
+        <span style="font-size:8px;color:rgba(200,214,229,.3)">▾</span>
+      </div>
+      <div id="modelList" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:50;background:#162240;border:1px solid rgba(0,180,255,.15);border-radius:8px;overflow:hidden;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+    </div>
+    <div class="panel-title" style="cursor:pointer;display:flex;justify-content:space-between" onclick="toggleHistory()">
+      <span>📜 历史对话</span>
+      <span id="historyToggle" style="font-size:9px;color:rgba(200,214,229,.3)">▾</span>
+    </div>
+    <div id="historyPanel" style="max-height:200px;overflow-y:auto;font-size:11px;margin-bottom:4px">
+      <div id="sessionStrip" style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap"></div>
+      <div id="historyList" style="display:flex;flex-direction:column;gap:3px"></div>
+    </div>
     <div class="panel-title">⚡ AGENT 协同网络</div>
     <div class="network-canvas-wrap"><canvas id="netCanvas"></canvas></div>
     <div class="agent-strip" id="agentStrip"></div>
   </div>
-
+  <div class="splitter" id="splitter"></div>
   <div class="chat-panel">
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="typing" id="typing"><div class="td"><span></span><span></span><span></span></div><span class="tt">Agent 协同分析中...</span></div>
@@ -120,19 +157,69 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/marked/11.0.0/marked.min.js"></script>
 <script>
 // ========== Config ==========
 const API_URL = 'http://localhost:8000/api/query';
 const API_STREAM = 'http://localhost:8000/api/query/stream';
+
+// ========== Model Selector ==========
+const MODELS = [
+  {id:'deepseek-chat',label:'DeepSeek Chat'},
+  {id:'deepseek-v4-flash',label:'DeepSeek V4 Flash'},
+  {id:'deepseek-v4-pro',label:'DeepSeek V4 Pro'},
+];
+let currentModel = 'deepseek-chat';
+
+// ========== Role System ==========
+const ROLES = [
+  {id:'keeper',label:'保管员',icon:'🔧',color:'#ffa500'},
+  {id:'manager',label:'科长',icon:'📋',color:'#a855f7'},
+  {id:'inspector',label:'质检员',icon:'🧪',color:'#00b4ff'},
+];
+let currentRole = 'keeper';
+// session 持久化到 localStorage，刷新不丢失
+let sessionId = localStorage.getItem('grain_session_id');
+if(!sessionId){
+  sessionId = 'sess_' + Date.now();
+  localStorage.setItem('grain_session_id', sessionId);
+}
+
 const AGENTS = [
   {id:0,name:'粮情分析',icon:'🌡',color:'#00b4ff'},
   {id:1,name:'智能作业',icon:'⚙',color:'#ffa500'},
   {id:2,name:'出入库',icon:'🚛',color:'#00ff88'},
   {id:3,name:'报表分析',icon:'📋',color:'#a855f7'},
+  {id:4,name:'质量检测',icon:'🧪',color:'#ff6b6b'},
 ];
 
-// ========== Canvas ==========
+// ========== Splitter Drag ==========
+(function(){
+  const panel=document.getElementById('networkPanel');
+  const splitter=document.getElementById('splitter');
+  let dragging=false;
+  splitter.addEventListener('mousedown',function(e){
+    dragging=true;splitter.classList.add('active');
+    document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    let w=e.clientX-splitter.getBoundingClientRect().width/2;
+    w=Math.max(200,Math.min(600,w));
+    panel.style.width=w+'px';
+    // 触发 canvas 重绘
+    if(typeof resize==='function')resize();
+  });
+  document.addEventListener('mouseup',function(){
+    if(!dragging)return;
+    dragging=false;splitter.classList.remove('active');
+    document.body.style.cursor='';
+    document.body.style.userSelect='';
+  });
+})();
+
+// ========== Canvas =========="
 const canvas = document.getElementById('netCanvas');
 const ctx = canvas.getContext('2d');
 let W,H,activeAgent=-1,animFrame;
@@ -152,7 +239,7 @@ function draw(){
   resize();
   const cx=W*.48,cy=H*.48,orbit=Math.min(W,H)*.3,t=Date.now()/3000;
   ctx.clearRect(0,0,W,H);
-  const nodes=AGENTS.map((a,i)=>{const an=-Math.PI/2+i*Math.PI/2;return{x:cx+Math.cos(an)*orbit,y:cy+Math.sin(an)*orbit*.85,r:34,id:i}});
+  const nodes=AGENTS.map((a,i)=>{const an=-Math.PI/2+i*Math.PI/1.25;return{x:cx+Math.cos(an)*orbit,y:cy+Math.sin(an)*orbit*.85,r:34,id:i}});
   const center={x:cx,y:cy-4,r:40};
   for(const n of nodes){
     ctx.strokeStyle='rgba(0,180,255,.05)';ctx.lineWidth=.8;
@@ -166,11 +253,11 @@ function draw(){
     const pulse=isC?1:(1+Math.sin(Date.now()/1500+(n.id||0))*.05),rr=n.r*pulse;
     const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,rr*2);
     if(isC)g.addColorStop(0,`rgba(0,180,255,${isA?.1:.05})`);
-    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';g.addColorStop(0,`rgba(${rgb},${isA?.18:.07})`)}
+    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':agent.color==='#a855f7'?'168,85,247':'255,107,107';g.addColorStop(0,`rgba(${rgb},${isA?.18:.07})`)}
     g.addColorStop(1,'rgba(0,180,255,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(n.x,n.y,rr*2,0,Math.PI*2);ctx.fill();
     const gd=ctx.createRadialGradient(n.x-rr*.2,n.y-rr*.2,0,n.x,n.y,rr);
     if(isC){gd.addColorStop(0,`rgba(0,180,255,${isA?.22:.1})`);gd.addColorStop(1,'rgba(0,180,255,.03)');ctx.strokeStyle=`rgba(0,180,255,${isA?.45:.22})`}
-    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':'168,85,247';gd.addColorStop(0,`rgba(${rgb},${isA?.3:.12})`);gd.addColorStop(1,`rgba(${rgb},.03)`);ctx.strokeStyle=`rgba(${rgb},${isA?.45:.18})`}
+    else{const rgb=agent.color==='#00b4ff'?'0,180,255':agent.color==='#ffa500'?'255,165,0':agent.color==='#00ff88'?'0,255,136':agent.color==='#a855f7'?'168,85,247':'255,107,107';gd.addColorStop(0,`rgba(${rgb},${isA?.3:.12})`);gd.addColorStop(1,`rgba(${rgb},.03)`);ctx.strokeStyle=`rgba(${rgb},${isA?.45:.18})`}
     ctx.fillStyle=gd;ctx.lineWidth=isA?1.8:1;ctx.beginPath();ctx.arc(n.x,n.y,rr,0,Math.PI*2);ctx.fill();ctx.stroke();
     if(isA){ctx.strokeStyle='rgba(0,255,136,.2)';ctx.lineWidth=1;ctx.setLineDash([3,5]);ctx.beginPath();ctx.arc(n.x,n.y,rr+5,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}
     ctx.textAlign='center';ctx.textBaseline='middle';
@@ -180,6 +267,73 @@ function draw(){
   animFrame=requestAnimationFrame(draw);
 }
 draw();
+
+// Model selector
+const modelTrigger=document.getElementById('modelTrigger');
+const modelLabel=document.getElementById('modelLabel');
+const modelList=document.getElementById('modelList');
+const modelListItems=[];
+let modelOpen=false;
+
+function selectModel(id){
+  currentModel=id;
+  const m=MODELS.find(x=>x.id===id);
+  if(m)modelLabel.textContent=m.label;
+  modelList.style.display='none';
+  modelOpen=false;
+  modelTrigger.style.borderColor='rgba(0,180,255,.12)';
+  modelListItems.forEach(item=>{
+    item.style.background=item.dataset.id===id?'rgba(0,180,255,.12)':'transparent';
+    item.querySelector('.check').textContent=item.dataset.id===id?'✓':'';
+  });
+}
+function toggleModelList(){
+  modelOpen=!modelOpen;
+  modelList.style.display=modelOpen?'block':'none';
+  modelTrigger.style.borderColor=modelOpen?'rgba(0,180,255,.3)':'rgba(0,180,255,.12)';
+}
+
+MODELS.forEach(m=>{
+  const item=document.createElement('div');
+  item.dataset.id=m.id;
+  item.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:11px;transition:.15s';
+  item.innerHTML=`<span class="check" style="width:12px;color:#00ff88;font-size:10px">${m.id===currentModel?'✓':''}</span><span>${m.label}</span>`;
+  item.onmouseover=()=>{if(item.dataset.id!==currentModel)item.style.background='rgba(0,180,255,.06)'};
+  item.onmouseout=()=>{if(item.dataset.id!==currentModel)item.style.background='transparent'};
+  item.onclick=()=>selectModel(m.id);
+  if(m.id===currentModel)item.style.background='rgba(0,180,255,.12)';
+  modelList.appendChild(item);
+  modelListItems.push(item);
+});
+
+// 初始化显示
+selectModel(currentModel);
+// 点击外部关闭
+document.addEventListener('click',(e)=>{
+  if(!e.target.closest('.model-select-wrap')){modelList.style.display='none';modelOpen=false;}
+});
+
+// Role buttons
+const roleStrip=document.getElementById('roleStrip');
+ROLES.forEach(r=>{
+  const d=document.createElement('div');d.className='agent-chip';
+  d.style.cursor='pointer';
+  d.style.flex='0 1 auto';
+  d.style.borderColor=currentRole===r.id?r.color:'rgba(0,180,255,.06)';
+  d.style.background=currentRole===r.id?r.color+'22':'rgba(12,20,40,.5)';
+  d.innerHTML=`<span class="dot" style="background:${r.color}"></span><span>${r.icon} ${r.label}</span>`;
+  d.addEventListener('click',()=>{
+    currentRole=r.id;
+    roleStrip.querySelectorAll('.agent-chip').forEach(c=>{
+      c.style.borderColor='rgba(0,180,255,.06)';
+      c.style.background='rgba(12,20,40,.5)';
+    });
+    d.style.borderColor=r.color;
+    d.style.background=r.color+'22';
+    chatInp.placeholder=`以${r.label}身份提问...`;
+  });
+  roleStrip.appendChild(d);
+});
 
 // Agent strip
 const strip=document.getElementById('agentStrip');
@@ -205,7 +359,11 @@ function escapeHtml(text){
   const d=document.createElement('div');d.textContent=text;return d.innerHTML;
 }
 function renderMd(text){
-  try{return marked.parse(text,{breaks:true,gfm:true})}catch(e){return escapeHtml(text)}
+  if(typeof marked!=='undefined' && marked.parse){
+    try{return marked.parse(text,{breaks:true,gfm:true})}catch(e){}
+  }
+  // fallback: 简单的换行和加粗处理
+  return text.replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
 }
 function addMsg(type,content){
   const d=document.createElement('div');d.className=`msg ${type}`;
@@ -231,6 +389,46 @@ function addResultMsg(steps,conclusion,agentsUsed,toolCount,elapsed){
 function showTyping(){typing.classList.add('show')}
 function hideTyping(){typing.classList.remove('show')}
 
+// ========== Debate ==========
+function startDebate(){
+  sendBtn.disabled=true;showTyping();
+  // 弹出输入框让用户输入辩论问题
+  const q=prompt('请输入辩论问题（多 Agent 会独立分析后投票）：','S-07是否满足通风条件？');
+  if(!q){hideTyping();sendBtn.disabled=false;return;}
+  addMsg('user','🤝 多 Agent 辩论：'+q);
+
+  fetch(API_URL.replace('/api/query','/api/debate'),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query:q,role:currentRole,session_id:sessionId,model:currentModel})
+  }).then(r=>r.json()).then(data=>{
+    hideTyping();
+    // 投票详情
+    let html='<div style="font-size:12px;color:rgba(200,214,229,.35);margin-bottom:6px">🤝 多 Agent 辩论</div>';
+    if(data.votes){
+      html+='<div style="margin-bottom:8px;font-size:12px">';
+      Object.entries(data.votes).forEach(([option,info])=>{
+        const barW=info.pct||0;
+        const isWin=option===data.winner;
+        html+=`<div style="margin:4px 0">${isWin?'🏆 ':'· '}${option} <span style="color:rgba(200,214,229,.3)">${info.pct}%</span>`;
+        html+=`<div style="height:6px;background:rgba(0,180,255,.06);border-radius:3px;margin:2px 0">`;
+        html+=`<div style="height:6px;width:${barW}%;background:${isWin?'linear-gradient(90deg,#40ffa0,#40c8ff)':'rgba(0,180,255,.2)'};border-radius:3px;transition:width .5s"></div></div></div>`;
+      });
+      html+='</div>';
+    }
+    html+=data.answer||'';
+    const d=document.createElement('div');d.className='msg sys';
+    d.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub">${renderMd(html)}</div>`;
+    chatMsgs.appendChild(d);
+    chatMsgs.scrollTop=chatMsgs.scrollHeight;
+    sendBtn.disabled=false;
+  }).catch(e=>{
+    hideTyping();
+    addMsg('sys',`<div style="color:#ff6b6b">❌ 辩论失败: ${e.message}</div>`);
+    sendBtn.disabled=false;
+  });
+}
+
 // ========== API Call (Streaming SSE) ==========
 async function ask(query){
   if(!query.trim())return;
@@ -239,10 +437,14 @@ async function ask(query){
 
   // Create streaming message container
   const sysMsg=document.createElement('div');sysMsg.className='msg sys';
-  sysMsg.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub"><div style="font-size:12px;color:rgba(200,214,229,.35);margin-bottom:6px">⚡ 多 Agent 协同推理</div><div class="steps" id="streamSteps"></div><div class="conc" id="streamConc" style="display:none"></div></div>`;
+  const stepsEl=document.createElement('div');stepsEl.className='steps';
+  const concEl=document.createElement('div');concEl.className='conc';concEl.style.display='none';
+  sysMsg.innerHTML=`<div class="av" style="background:rgba(0,255,136,.1)">🧠</div><div class="bub"><div style="font-size:12px;color:rgba(200,214,229,.35);margin-bottom:6px">⚡ 多 Agent 协同推理</div></div>`;
+  sysMsg.querySelector('.bub').appendChild(stepsEl);
+  sysMsg.querySelector('.bub').appendChild(concEl);
   chatMsgs.appendChild(sysMsg);chatMsgs.scrollTop=chatMsgs.scrollHeight;
-  const stepsEl=document.getElementById('streamSteps');
-  const concEl=document.getElementById('streamConc');
+  let thinkInd=null;
+let currentRid='';
 
   function addStep(icon,iconBg,iconColor,label,msg,color){
     const d=document.createElement('div');d.className='step';d.style.animationDelay='0s';
@@ -254,7 +456,7 @@ async function ask(query){
     const res=await fetch(API_STREAM,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({query})
+      body:JSON.stringify({query,role:currentRole,session_id:sessionId,model:currentModel})
     });
     hideTyping();
     if(!res.ok)throw new Error(`HTTP ${res.status}`);
@@ -275,6 +477,7 @@ async function ask(query){
           const ev=JSON.parse(part.slice(6));
           switch(ev.type){
             case 'plan':
+              currentRid=ev.request_id;
               addStep('📋','rgba(0,180,255,.1)','#00d4ff','Orchestrator',`🎯 ${ev.scenario} · 请求 ${ev.request_id}`,'#00d4ff');
               break;
             case 'step':
@@ -287,21 +490,19 @@ async function ask(query){
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             }
             case 'tool_calls':
-              {const te=document.getElementById('thinkInd');if(te)te.remove();}
+              if(thinkInd){thinkInd.remove();thinkInd=null;}
               for(const tc of ev.calls)
                 addStep('🔧','transparent','rgba(0,180,255,.4)','',`${tc.tool}(${tc.input})`,'rgba(0,180,255,.5)');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             case 'agent_done':
               clearFlash();
-              {const te=document.getElementById('thinkInd');if(te)te.remove();}
+              if(thinkInd){thinkInd.remove();thinkInd=null;}
               addStep('✓','rgba(0,255,136,.1)','#00ff88','',`${ev.agent} 完成 (${ev.elapsed}s, ${ev.tool_count}次)`,'rgba(200,214,229,.4)');
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             case 'thinking':{
-              // 显示或更新思考中指示器（持续动画直到下个事件覆盖）
-              let tip=document.getElementById('thinkInd');
-              if(!tip){
-                tip=document.createElement('div');tip.id='thinkInd';tip.className='step';tip.style.animationDelay='0s';
-                stepsEl.appendChild(tip);
+              if(!thinkInd){
+                thinkInd=document.createElement('div');thinkInd.className='step';thinkInd.style.animationDelay='0s';
+                stepsEl.appendChild(thinkInd);
               }
               const a=AGENTS.find(x=>x.name===ev.agent);
               const taskText=ev.task?' · '+ev.task:'';
@@ -310,17 +511,25 @@ async function ask(query){
               chatMsgs.scrollTop=chatMsgs.scrollHeight;break;
             }
             case 'agent_error':
-              // 移除 thinking 指示器
-              const te=document.getElementById('thinkInd');if(te)te.remove();
+              if(thinkInd){thinkInd.remove();thinkInd=null;}
               addStep('✗','rgba(255,50,50,.1)','#ff4757','',`${ev.agent}: ${ev.error}`,'#ff4757');
               break;
             case 'conclusion':
-              {const te=document.getElementById('thinkInd');if(te)te.remove();}
+              if(thinkInd){thinkInd.remove();thinkInd=null;}
               concEl.style.display='block';
               concEl.innerHTML=renderMd(ev.text);
+              // 加 DAG 按钮
+              const dagBtn=document.createElement('div');
+              dagBtn.style.cssText='margin-top:6px;font-size:11px;color:rgba(0,180,255,.4);cursor:pointer;display:inline-block';
+              dagBtn.textContent='📊 查看推理链路';
+              dagBtn.onclick=()=>{
+                if(currentRid)fetchDAG(currentRid,concEl);
+              };
+              sysMsg.querySelector('.bub').appendChild(dagBtn);
               chatMsgs.scrollTop=chatMsgs.scrollHeight;
               break;
             case 'done':
+              loadHistory();loadSessions();  // 刷新历史面板+会话列表
               const meta=document.createElement('div');
               meta.className='meta';
               meta.innerHTML=`<span>🤖 ${ev.agents_used.join('、')}</span><span>🔧 ${ev.tool_calls_count}次</span>`;
@@ -342,15 +551,146 @@ sendBtn.addEventListener('click',()=>ask(chatInp.value));
 chatInp.addEventListener('keydown',e=>{if(e.key==='Enter')ask(chatInp.value)});
 
 // Quick questions
-const Qs=[{t:'🌡 S-07满足通风条件？'},{t:'📊 最近粮情有什么异常？'},{t:'🚛 今天出入库情况？'},{t:'📋 生成今日库存日报'},{t:'🐛 S-03需要熏蒸吗？'}];
+const Qs=[{t:'🌡 S-07满足通风条件？'},{t:'📊 最近粮情有什么异常？'},{t:'🚛 今天出入库情况？'},{t:'📋 生成今日库存日报'},{t:'🤝 多 Agent 辩论'},{t:'🧪 S-03稻谷质量如何？'}];
 const qsEl=document.getElementById('quickQs');
 Qs.forEach(q=>{
   const c=document.createElement('span');c.className='qc';c.textContent=q.t;
-  c.addEventListener('click',()=>ask(q.t));qsEl.appendChild(c);
+  c.addEventListener('click',()=>{
+    if(q.t==='🤝 多 Agent 辩论'){
+      chatInp.value='';
+      startDebate();
+    }else{
+      ask(q.t);
+    }
+  });qsEl.appendChild(c);
 });
 
 // Welcome
 addMsg('sys','👋 欢迎使用粮库多智能体系统！<br><br>输入问题或点击快捷按钮，系统会通过 <b>DeepSeek API</b> 调度多个 Agent 并行分析。<br><br><span style="font-size:12px;color:rgba(200,214,229,.25)">💡 确保后端已启动: <code>uvicorn src.api.server:app --reload --port 8000</code></span>');
+
+// ========== History Panel ==========
+let historyOpen=true;
+function toggleHistory(){
+  historyOpen=!historyOpen;
+  document.getElementById('historyPanel').style.display=historyOpen?'block':'none';
+  document.getElementById('historyToggle').textContent=historyOpen?'▾':'▸';
+}
+function switchSession(sid){
+  sessionId=sid;
+  localStorage.setItem('grain_session_id', sid);
+  loadHistory();
+}
+function newSession(){
+  const ns='sess_'+Date.now();
+  switchSession(ns);
+}
+function loadSessions(){
+  fetch(API_URL.replace('/api/query','/api/sessions'))
+    .then(r=>r.json()).then(data=>{
+      const strip=document.getElementById('sessionStrip');
+      strip.innerHTML='';
+      // 当前会话按钮
+      const cur=document.createElement('div');
+      cur.style.cssText='padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;background:rgba(0,180,255,.15);border:1px solid rgba(0,180,255,.25);color:#40c8ff;flex-shrink:0';
+      cur.textContent='当前';
+      cur.onclick=()=>loadHistory();
+      strip.appendChild(cur);
+      // 新建会话
+      const add=document.createElement('div');
+      add.style.cssText='padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.15);color:#40ffa0;flex-shrink:0';
+      add.textContent='+ 新建';
+      add.onclick=newSession;
+      strip.appendChild(add);
+      // 其他会话
+      if(data.sessions){
+        data.sessions.forEach(s=>{
+          if(s.session_id===sessionId)return;
+          const d=document.createElement('div');
+          d.style.cssText='padding:2px 6px;border-radius:4px;font-size:10px;cursor:pointer;background:rgba(200,214,229,.04);border:1px solid rgba(0,180,255,.06);color:rgba(200,214,229,.5);flex-shrink:0';
+          d.textContent='#'+s.session_id.slice(-4)+' ('+s.count+'条)';
+          d.onclick=()=>switchSession(s.session_id);
+          strip.appendChild(d);
+        });
+      }
+    }).catch(()=>{});
+}
+function loadHistory(){
+  fetch(API_URL.replace('/api/query','/api/history?session_id='+sessionId+'&limit=15'))
+    .then(r=>r.json()).then(data=>{
+      const list=document.getElementById('historyList');
+      list.innerHTML='';
+      if(!data.items||data.items.length===0){
+        list.innerHTML='<div style="color:rgba(200,214,229,.2);padding:6px">暂无对话</div>';
+        return;
+      }
+      data.items.forEach(item=>{
+        const d=document.createElement('div');
+        d.style.cssText='padding:4px 8px;border-radius:5px;cursor:pointer;transition:.15s;display:flex;gap:6px;align-items:flex-start';
+        // 生成标题：取前20字，去除非文本前缀
+        let title=item.query.replace(/^.*?用户问题[：:]\s*/,'').trim();
+        if(title.length>20)title=title.slice(0,20)+'…';
+        if(!title)title=item.query.slice(0,20);
+        d.innerHTML=`<span style="font-size:10px;opacity:.4;flex-shrink:0">${item.time?item.time.slice(5,16):''}</span><span title="${item.query.replace(/"/g,'&quot;')}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${title}</span>`;
+        d.onmouseover=()=>{d.style.background='rgba(0,180,255,.06)'};
+        d.onmouseout=()=>{d.style.background=''};
+        d.onclick=()=>{chatInp.value=item.query;ask(item.query)};
+        list.appendChild(d);
+      });
+    }).catch(()=>{});
+}
+loadHistory();
+loadSessions();
+
+// ========== DAG Visualization ==========
+function fetchDAG(requestId,container){
+  if(container.querySelector('.dag-wrap'))return;
+  const wrap=document.createElement('div');wrap.className='dag-wrap';
+  wrap.style.cssText='margin-top:8px;border-top:1px solid rgba(0,180,255,.08);padding-top:8px';
+  wrap.innerHTML='<div style="font-size:11px;color:rgba(200,214,229,.3);margin-bottom:4px">⏳ 加载推理链路...</div>';
+  container.appendChild(wrap);
+  fetch(API_URL.replace('/api/query','/api/trace/'+requestId))
+    .then(r=>r.json()).then(data=>{
+      if(!data.nodes||data.nodes.length===0){
+        wrap.innerHTML='<div style="font-size:11px;color:rgba(200,214,229,.2)">无工具调用记录</div>';
+        return;
+      }
+      drawDAG(data.nodes,wrap);
+    }).catch(()=>{
+      wrap.innerHTML='<div style="font-size:11px;color:rgba(200,214,229,.2)">加载失败</div>';
+    });
+}
+function drawDAG(nodes,container){
+  const colors={};
+  const agents=[...new Set(nodes.map(n=>n.agent))];
+  const palette=['#00b4ff','#ffa500','#00ff88','#a855f7','#ff6b6b'];
+  agents.forEach((a,i)=>{colors[a]=palette[i%palette.length];});
+  // Build group by agent
+  const groups={};
+  nodes.forEach(n=>{
+    if(!groups[n.agent])groups[n.agent]=[];
+    groups[n.agent].push(n);
+  });
+  const agentList=Object.keys(groups);
+  // Render as simple HTML flow (not canvas for simplicity)
+  let html='<div style="font-size:11px;line-height:1.6">';
+  agentList.forEach(agent=>{
+    const tools=groups[agent];
+    html+=`<div style="margin-bottom:6px"><span style="color:${colors[agent]};font-weight:600">${agent}</span>`;
+    tools.forEach((t,i)=>{
+      const isLast=i===tools.length-1;
+      html+=`<div style="display:flex;align-items:flex-start;gap:6px;padding:3px 0 3px 14px">`;
+      html+=`<span style="color:${colors[agent]};font-size:10px;flex-shrink:0">${isLast?'└─':'├─'}</span>`;
+      html+=`<span style="background:${colors[agent]}15;border:1px solid ${colors[agent]}22;border-radius:4px;padding:2px 8px;flex:1;font-size:11px">`;
+      html+=`<span style="font-weight:600">🔧 ${t.tool}</span>`;
+      html+=`<span style="color:rgba(200,214,229,.3);font-size:10px;margin-left:6px">${t.duration_ms}ms</span>`;
+      if(t.input)html+=`<div style="font-size:10px;color:rgba(200,214,229,.4)">${t.input.slice(0,40)}</div>`;
+      html+=`</span></div>`;
+    });
+    html+=`</div>`;
+  });
+  html+='</div>';
+  container.innerHTML=html;
+}
 
 // Check backend health
 fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'ping'})})

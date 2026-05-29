@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><title>面试介绍话术与知识点</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1a2e;color:#dce6f0;font-family:'Segoe UI','PingFang SC',sans-serif;padding:30px 40px;max-width:900px;margin:0 auto;line-height:1.8}
+h1{font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#ff6b6b,#40c8ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:rgba(200,214,229,.3);font-size:13px;margin-bottom:20px;border-bottom:1px solid rgba(0,180,255,.08);padding-bottom:10px}
+h2{font-size:18px;margin:24px 0 10px;color:#e0ecff;border-left:3px solid #ff6b6b;padding-left:10px;margin-top:32px}
+h3{font-size:15px;margin:16px 0 6px;color:#ff6b6b}
+.card{background:rgba(20,35,60,.5);border:1px solid rgba(0,180,255,.08);border-radius:10px;padding:16px 20px;margin:10px 0}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th,.card td{padding:6px 10px;border:1px solid rgba(0,180,255,.06);text-align:left}
+.card th{background:rgba(0,180,255,.06);color:#40c8ff;font-weight:600}
+.card td{background:rgba(0,180,255,.02)}
+code{background:rgba(0,180,255,.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#40c8ff}
+pre{background:rgba(0,0,0,.3);border:1px solid rgba(0,180,255,.06);border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:12px;line-height:1.5;margin:6px 0}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-right:4px}
+.tag.hf{background:rgba(0,255,136,.12);color:#40ffa0}
+.tag.tech{background:rgba(0,180,255,.12);color:#40c8ff}
+.tag.qa{background:rgba(255,165,0,.12);color:#ffa500}
+blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 0;background:rgba(0,180,255,.04);border-radius:0 6px 6px 0;font-style:italic}
+</style>
+</head>
+<body>
+
+<h1>🎯 面试介绍话术与知识点</h1>
+<div class="sub">粮库多智能体系统 · 面试准备指南</div>
+
+<h2>一、自我介绍话术（1 分钟版）</h2>
+
+<div class="card">
+<blockquote>
+"我做了一个粮库仓储多智能体系统，基于 LangChain + LangGraph 搭建了 5 个专业 Agent（粮情分析、智能作业、出入库、质量检测、报表分析），通过状态机编排替代传统 if-else 路由。<br><br>
+主要亮点包括：RAG 知识库让 Agent 能检索国标文档，Hybrid Search 融合向量和关键词召回；多级记忆系统用 SQLite + ChromaDB 做对话持久化和语义召回；以及 Agent 辩论机制让多个 Agent 独立分析后投票决策。<br><br>
+技术栈用了 DeepSeek API、FastAPI 流式 SSE 前端实时展示推理过程，完整代码在 GitHub 上。"
+</blockquote>
+</div>
+
+<h2>二、逐技术点深挖</h2>
+
+<h3>2.1 Multi-Agent 架构 <span class="tag hf">高频</span></h3>
+<div class="card">
+<p><strong>面试官问：为什么要用多 Agent 而不是一个 Agent 做所有事？</strong></p>
+<blockquote>
+"单一 Agent 的 prompt 太长会导致注意力分散，工具选择准确率下降。我把粮库业务拆成 5 个垂直 Agent，每个只有 3~6 个工具，prompt 聚焦，调用准确率更高。同时多 Agent 支持并行执行，整体响应更快。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>Agent 设计原则</td><td>单一职责、prompt 聚焦、工具数量控制</td></tr>
+<tr><td>Orchestration 模式</td><td>Centralized vs Decentralized</td></tr>
+<tr><td>并行 vs 串行</td><td>asyncio.gather 并发执行</td></tr>
+</table>
+</div>
+
+<h3>2.2 LangGraph 状态机 <span class="tag hf">高频</span></h3>
+<div class="card">
+<p><strong>面试官问：为什么用 LangGraph 而不是普通 if-else？</strong></p>
+<blockquote>
+"手写 if-else 编排的问题在于扩展性差——新增一个 Agent 要改路由逻辑。LangGraph 用 StateGraph 定义节点和有向边，每个 Agent 是一个 Node，路由由 LLM 或条件函数决定，新增 Agent 只需注册一个新 Node 和对应边。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>StateGraph</td><td>节点(Node) + 边(Edge) + 状态(State)</td></tr>
+<tr><td>条件路由</td><td>add_conditional_edges</td></tr>
+<tr><td>与 LangChain 关系</td><td>LangGraph 是 LangChain 的编排层</td></tr>
+</table>
+</div>
+
+<h3>2.3 RAG 知识库 <span class="tag hf">高频</span></h3>
+<div class="card">
+<p><strong>面试官问：RAG 怎么实现的？为什么用 Hybrid Search？</strong></p>
+<blockquote>
+"国标文档里专业术语很多，纯向量检索对'容重≥790g/L'这类精确匹配效果不好。我加了 BM25 关键词检索做 Hybrid Search，两个检索器各占 0.5 权重融合结果，兼顾语义相似度和关键词精确匹配。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>Embedding 模型</td><td>text-embedding-3-small</td></tr>
+<tr><td>Chunk 策略</td><td>chunk_size=512, overlap=50</td></tr>
+<tr><td>Hybrid Search</td><td>向量检索 + BM25 加权融合</td></tr>
+<tr><td>ChromaDB</td><td>持久化向量数据库</td></tr>
+</table>
+</div>
+
+<h3>2.4 记忆系统 <span class="tag hf">高频</span></h3>
+<div class="card">
+<p><strong>面试官问：Agent 怎么记住之前的对话？</strong></p>
+<blockquote>
+"我做了三级记忆：短期用 SQLite 存最近 N 轮对话，超阈值时用 LLM 压缩成摘要；长期用 ChromaDB 做向量存储，新问题来的时候语义召回相关历史。每次 Agent 调用时，历史上下文 + 压缩摘要 + 语义召回结果一起拼入 prompt。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>短期记忆</td><td>滑动窗口 + 注入 prompt</td></tr>
+<tr><td>长期记忆</td><td>向量库存储 + 语义召回</td></tr>
+<tr><td>记忆压缩</td><td>LLM 摘要压缩</td></tr>
+<tr><td>SQLite vs 向量库</td><td>结构化 vs 非结构化存储</td></tr>
+</table>
+</div>
+
+<h3>2.5 Agent 辩论机制 <span class="tag tech">进阶</span></h3>
+<div class="card">
+<p><strong>面试官问：怎么保证 Agent 回答的准确性？</strong></p>
+<blockquote>
+"单个 Agent 可能出错，我实现了辩论机制——多个 Agent 独立分析同一问题，各自输出结论 + 置信度，然后加权投票。比如通风条件判断，粮情分析、智能作业、质量检测各投一票，最终结果比单 Agent 更可靠。前端还画了柱状图展示投票分布。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>Ensemble 思想</td><td>多模型集成减少偏差</td></tr>
+<tr><td>加权投票</td><td>置信度作为权重</td></tr>
+<tr><td>结构化输出</td><td>Agent 返回 JSON 格式结论</td></tr>
+</table>
+</div>
+
+<h3>2.6 可观测性 <span class="tag tech">进阶</span></h3>
+<div class="card">
+<p><strong>面试官问：怎么追踪和调试 Agent 的行为？</strong></p>
+<blockquote>
+"每个请求分配 trace_id，贯穿前端→API→编排器→Agent→Tool。所有 LLM 调用和工具调用都记录到 SQLite，包括 Token 数、耗时、成功状态。前端还能查看工具调用的 DAG 图，直观看到 Agent 的推理链路。"
+</blockquote>
+
+<p><strong>对应知识点：</strong></p>
+<table>
+<tr><td>分布式追踪</td><td>trace_id + 全链路日志</td></tr>
+<tr><td>Token 计量</td><td>估计 tokens + DB 记录</td></tr>
+<tr><td>DAG 可视化</td><td>有向无环图展示调用链</td></tr>
+</table>
+</div>
+
+<h3>2.7 流式 SSE <span class="tag tech">进阶</span></h3>
+<div class="card">
+<p><strong>面试官问：前端怎么实时展示推理过程？</strong></p>
+<blockquote>
+"后端用 FastAPI StreamingResponse 做 SSE，每次 Agent 开始/完成/调用工具时 yield 一个事件。前端收到 thinking 事件就显示'分析中...'，收到 tool_calls 就显示调了哪些工具，收到 agent_done 就显示耗时。用户不用干等，体验好很多。"
+</blockquote>
+
+<table>
+<tr><td>SSE vs WebSocket</td><td>单向流 vs 双向通信</td></tr>
+<tr><td>Event Stream 格式</td><td>data: JSON\n\n</td></tr>
+<tr><td>前端 EventSource</td><td>readable stream 读取</td></tr>
+</table>
+</div>
+
+<h2>三、面试官可能追问的问题</h2>
+
+<div class="card">
+<table>
+<tr><th>问题</th><th>参考答案</th></tr>
+<tr><td>DeepSeek 和其他模型比有什么优劣？</td><td>便宜、支持 function calling、V3 响应快；但 V4 Flash 推理模型不支持工具调用</td></tr>
+<tr><td>RAG 检索准确率怎么评估？</td><td>没有正式做 RAGAS 评估，但通过 Hybrid Search 提升了术语匹配准确率</td></tr>
+<tr><td>为什么不用 LangChain 的 ConversationBufferMemory？</td><td>因为它只在内存里，重启丢数据；我用 SQLite 持久化，还加了向量召回</td></tr>
+<tr><td>Agent 调用工具失败怎么处理？</td><td>LLM 调用失败自动重试 2 次（指数退避），工具本身是本地 mock 不会失败</td></tr>
+<tr><td>这个项目你做了多久？</td><td>核心功能约 2 周，后续不断迭代加入 RAG、记忆、辩论等进阶功能</td></tr>
+<tr><td>有没有做测试？</td><td>单元测试用 pytest 覆盖了 Tool 层和编排器，CI 自动跑</td></tr>
+<tr><td>部署方案？</td><td>docker-compose 一键部署（API + ChromaDB）</td></tr>
+</table>
+</div>
+
+<h2>四、简历上的描述</h2>
+
+<div class="card">
+<blockquote>
+<strong>粮库仓储多智能体系统</strong><br>
+基于 LangChain + LangGraph + FastAPI 的多 Agent 协同系统，5 个专业 Agent 覆盖粮情分析、智能作业、出入库、质量检测、报表分析全流程。<br><br>
+• <strong>RAG 知识库</strong>：ChromaDB + Hybrid Search（向量+BM25），实时检索国标文档<br>
+• <strong>多级记忆</strong>：SQLite 短期记忆 + ChromaDB 长期语义召回 + LLM 自动压缩<br>
+• <strong>LangGraph 编排</strong>：StateGraph 状态机替代手写 if-else，支持条件路由和并行执行<br>
+• <strong>Agent 辩论</strong>：多 Agent 独立分析后加权投票，提高结论可靠性<br>
+• <strong>可观测性</strong>：trace_id 全链路追踪 + Token 计量 + DAG 可视化<br>
+• <strong>流式前端</strong>：SSE 实时展示 thinking → tool_calls → conclusion 完整推理过程<br>
+• <strong>角色系统</strong>：保管员/科长/质检员三种视角，Prompt 注入差异化回答<br>
+</blockquote>
+</div>
+</body>
+</html>

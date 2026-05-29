@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><title>工具调用 DAG + Agent 辩论投票设计</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1a2e;color:#dce6f0;font-family:'Segoe UI','PingFang SC',sans-serif;padding:30px 40px;max-width:900px;margin:0 auto;line-height:1.8}
+h1{font-size:24px;margin-bottom:6px;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:18px;margin:28px 0 12px;color:#e0ecff;border-left:3px solid #40c8ff;padding-left:10px}
+h3{font-size:15px;margin:20px 0 8px;color:#40c8ff}
+.card{background:rgba(20,35,60,.5);border:1px solid rgba(0,180,255,.1);border-radius:10px;padding:16px 20px;margin:12px 0}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th,.card td{padding:8px 10px;border:1px solid rgba(0,180,255,.08);text-align:left}
+.card th{background:rgba(0,180,255,.06);color:#40c8ff}
+.card td{background:rgba(0,180,255,.02)}
+code{background:rgba(0,180,255,.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#40c8ff}
+pre{background:rgba(0,0,0,.3);border:1px solid rgba(0,180,255,.06);border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:12px;line-height:1.5}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;margin-right:4px}
+.tag.p1{background:rgba(0,180,255,.15);color:#40c8ff}
+.tag.p2{background:rgba(255,165,0,.15);color:#ffa500}
+</style>
+</head>
+<body>
+
+<h1>🧩 面试级功能设计文档</h1>
+<p>工具调用 DAG 可视化 + Agent 辩论/投票机制</p>
+
+<h2>一、工具调用 DAG 可视化 <span class="tag p1">P1</span></h2>
+
+<h3>1.1 目标</h3>
+<div class="card">
+<p>把 Agent 的推理过程画成一个有向无环图，展示工具调用的先后顺序和数据流向。</p>
+<p>用户可以看到：</p>
+<ul style="padding-left:20px">
+  <li>🔧 调用了哪些工具</li>
+  <li>⏱ 每个工具的执行时间</li>
+  <li>🔗 工具之间的依赖关系</li>
+  <li>📊 每步的输出摘要</li>
+</ul>
+</div>
+
+<h3>1.2 数据结构</h3>
+<div class="card">
+<pre>
+// 当前 tool_calls 结构（已有）
+{
+  "tool": "get_sensor_data",
+  "input": "{'silo_id': 'S-07'}",
+  "output": "🌡 温度: 上层 32.4°C...",
+  "duration_ms": 850
+}
+
+// 新增：增加父节点 ID，形成 DAG 边
+{
+  "tool": "analyze_anomaly",
+  "input": "{'silo_id': 'S-07'}",
+  "output": "发现温度异常...",
+  "duration_ms": 1200,
+  "depends_on": ["get_sensor_data", "get_silo_info"]  // ← 新增
+}
+</pre>
+</div>
+
+<h3>1.3 前端渲染</h3>
+<div class="card">
+<p>在结论气泡下方增加一个 <strong>「📊 查看推理链路」</strong> 折叠面板。</p>
+<p>点击后 DAG 图展开：</p>
+<pre>
+  ┌─────────────┐     ┌──────────────┐
+  │get_sensor_data│────▶│analyze_anomaly│
+  │ S-07  (0.8s) │     │  (1.2s)      │
+  └─────────────┘     └──────┬───────┘
+                             ▼
+  ┌─────────────┐     ┌──────────────┐
+  │get_silo_info │────▶│  conclusion  │
+  │ S-07  (0.3s) │     │  (2.1s)      │
+  └─────────────┘     └──────────────┘
+</pre>
+<p>实现方式：Canvas 或 SVG 绘制节点 + 连线，每个节点显示工具名 + 输入摘要 + 耗时。</p>
+</div>
+
+<h3>1.4 实现步骤</h3>
+<div class="card">
+<ol style="padding-left:20px">
+  <li><strong>后端</strong>：tool_calls 增加 <code>duration_ms</code> 和 <code>depends_on</code> 字段</li>
+  <li><strong>后端</strong>：新增 API <code>GET /api/trace/{request_id}</code> 返回完整 DAG 数据</li>
+  <li><strong>前端</strong>：在结论气泡底部加「查看推理链路」折叠按钮</li>
+  <li><strong>前端</strong>：用 Canvas 绘制 DAG 图</li>
+</ol>
+</div>
+
+<hr style="border-color:rgba(0,180,255,.1);margin:24px 0">
+
+<h2>二、Agent 辩论/投票机制 <span class="tag p2">P2</span></h2>
+
+<h3>2.1 目标</h3>
+<div class="card">
+<p>多个 Agent 对同一问题独立分析，然后聚合投票得出最终结论。类似「专家会诊」模式。</p>
+<table>
+<tr><th>对比</th><th>当前（单 Agent 回答）</th><th>辩论模式</th></tr>
+<tr><td>粮情分析</td><td>✅ 参与</td><td>✅ 独立分析 + 投票</td></tr>
+<tr><td>智能作业</td><td>❌ 不参与</td><td>✅ 独立分析 + 投票</td></tr>
+<tr><td>质量检测</td><td>❌ 不参与</td><td>✅ 独立分析 + 投票</td></tr>
+<tr><td>结论</td><td>单 Agent 说了算</td><td>多 Agent 投票决定</td></tr>
+</table>
+</div>
+
+<h3>2.2 流程设计</h3>
+<div class="card">
+<pre>
+用户：S-07 是否需要通风？
+
+步骤 1 ── 并行分发 ──────────────────────┐
+  ├── 粮情分析：分析温湿度数据 → 结论 + 置信度
+  ├── 智能作业：分析天气/设备 → 结论 + 置信度
+  ├── 质量检测：分析粮食品质 → 结论 + 置信度
+  └── 报表分析：分析历史趋势 → 结论 + 置信度
+
+步骤 2 ── 投票聚合 ──────────────────────┐
+  聚合 Agent 读取 4 个 Agent 的结论和置信度
+  → 加权投票：结论 A (3票) vs 结论 B (1票)
+  → 输出最终结论 + 分歧说明
+</pre>
+</div>
+
+<h3>2.3 数据结构</h3>
+<div class="card">
+<pre>
+// 每个 Agent 返回结构化投票数据
+{
+  "agent": "粮情分析",
+  "conclusion": "建议通风",
+  "confidence": 0.85,      // 置信度 0~1
+  "reason": "上层温度32°C偏高",
+  "evidence": ["温度", "湿度"],
+}
+
+// 聚合结果
+{
+  "winner": "建议通风",
+  "votes": {"建议通风": 3, "暂不通风": 1},
+  "confidence": 0.75,
+  "dissenting": ["质量检测不通风理由：水分接近阈值"]
+}
+</pre>
+</div>
+
+<h3>2.4 实现步骤</h3>
+<div class="card">
+<ol style="padding-left:20px">
+  <li><strong>知识库</strong>：在 DebateInput schema 定义投票数据结构</li>
+  <li><strong>编排器</strong>：新增 <code>debate(query) → 并行调所有 Agent → 投票聚合</code></li>
+  <li><strong>聚合 Agent</strong>：用一个专用 Agent 读取各 Agent 的结构化结论，加权投票</li>
+  <li><strong>前端</strong>：新增「🤝 多 Agent 辩论」按钮，展示投票柱状图</li>
+</ol>
+</div>
+
+<h3>2.5 核心代码</h3>
+<div class="card">
+<pre>
+# orchestrator/debate.py
+class DebateOrchestrator:
+    async def debate(self, query: str) -> dict:
+        # 1. 并行调所有 Agent
+        tasks = [agent.run(query + "\n请输出结构化结论") for agent in self.agents.values()]
+        results = await asyncio.gather(*tasks)
+        
+        # 2. 解析结构化结论
+        votes = {}
+        for r in results:
+            conclusion = parse_conclusion(r["output"])
+            votes[conclusion["option"]] = votes.get(conclusion["option"], 0) + conclusion["confidence"]
+        
+        # 3. 统计投票
+        winner = max(votes, key=votes.get)
+        return {
+            "winner": winner,
+            "votes": votes,
+            "details": results,
+        }
+</pre>
+</div>
+
+<h2>三、实现顺序</h2>
+
+<div class="card">
+<table>
+<tr><th>顺序</th><th>任务</th><th>文件</th><th>时间</th></tr>
+<tr><td>1</td><td>DAG：后端 tool_calls 加 duration + depends_on</td><td><code>base_agent.py</code></td><td>0.5h</td></tr>
+<tr><td>2</td><td>DAG：新增 API <code>/api/trace/{rid}</code></td><td><code>server.py</code></td><td>0.5h</td></tr>
+<tr><td>3</td><td>DAG：前端 Canvas 绘制 DAG</td><td><code>index.html</code></td><td>3h</td></tr>
+<tr><td>4</td><td>辩论：新增 Debate 编排器</td><td><code>debate.py</code></td><td>2h</td></tr>
+<tr><td>5</td><td>辩论：前端投票 UI</td><td><code>index.html</code></td><td>1h</td></tr>
+</table>
+</div>
+
+</body>
+</html>

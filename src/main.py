@@ -11,27 +11,31 @@ from src.agents.grain_condition import create_grain_condition_agent
 from src.agents.operation import create_operation_agent
 from src.agents.inoutbound import create_inoutbound_agent
 from src.agents.report import create_report_agent
-from src.orchestrator.orchestrator import GrainOrchestrator
+from src.agents.quality import create_quality_agent
+from src.orchestrator.graph_orchestrator import LangGraphOrchestrator
 
 
-def init_system() -> GrainOrchestrator:
-    """初始化全部 4 个 Agent 并注册到编排器"""
+def init_system() -> LangGraphOrchestrator:
+    """初始化全部 5 个 Agent 并注册到编排器"""
     refresh_sensor_data()
     grain = create_grain_condition_agent()
     op = create_operation_agent()
     io = create_inoutbound_agent()
     rpt = create_report_agent()
+    qual = create_quality_agent()
     
     print(f"  ✅ 粮情分析 Agent (工具: {grain.tool_names})")
     print(f"  ✅ 智能作业 Agent (工具: {op.tool_names})")
     print(f"  ✅ 出入库 Agent (工具: {io.tool_names})")
     print(f"  ✅ 报表分析 Agent (工具: {rpt.tool_names})")
+    print(f"  ✅ 质量检测 Agent (工具: {qual.tool_names})")
     
-    orch = GrainOrchestrator()
+    orch = LangGraphOrchestrator()
     orch.register_agent(grain)
     orch.register_agent(op)
     orch.register_agent(io)
     orch.register_agent(rpt)
+    orch.register_agent(qual)
     return orch
 
 
@@ -65,13 +69,14 @@ async def demo_ventilation():
 
 async def interactive_mode():
     """交互模式 — 支持所有 Agent"""
-    print("\n🔄 初始化 4 个 Agent（接入 DeepSeek API）...")
+    print("\n🔄 初始化 5 个 Agent（接入 DeepSeek API）...")
     orch = init_system()
     print("\n✅ 系统就绪！支持以下场景：")
     print("   🌡 粮情分析 — S-07温度多少？最近粮情有什么变化？")
     print("   ⚙ 智能作业 — S-07满足通风条件吗？S-03需要熏蒸吗？")
     print("   🚛 出入库 — 今天出入库情况如何？查询今日入库记录")
     print("   📋 报表分析 — 生成今日库存日报、哪些仓房有异常？")
+    print("   📋 质量检测 — 小麦的质量等级分布？S-03最近三批稻谷质量如何？")
     print("\n💬 输入问题开始 (q 退出)\n")
 
     while True:
@@ -101,7 +106,7 @@ async def interactive_mode():
 
 
 async def main():
-    print("\n🌾 粮库仓储多智能体系统 (4 Agent)")
+    print("\n🌾 粮库仓储多智能体系统 (5 Agent)")
     print("=" * 45)
     print("1. 演示: 通风条件判断（最小闭环）")
     print("2. 交互模式（自由提问）")

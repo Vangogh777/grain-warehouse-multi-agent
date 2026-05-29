@@ -167,3 +167,159 @@ def get_device_status(silo_id: str) -> Optional[dict]:
     ensure_data()
     devices = _sensor_cache.get("devices", {})
     return devices.get(silo_id)
+
+
+# ========== 质检记录数据 ==========
+
+QUALITY_RECORDS = [
+    # 小麦
+    {"id": "Q-2401", "silo_id": "S-01", "grain_type": "小麦", "batch": "B20240115",
+     "moisture": 12.0, "impurity": 1.2, "damaged_ratio": 0.5, "protein": 13.5,
+     "test_weight": 775, "grade": "一等", "inspector": "张工", "date": "2024-01-15"},
+    {"id": "Q-2402", "silo_id": "S-01", "grain_type": "小麦", "batch": "B20240320",
+     "moisture": 11.8, "impurity": 1.0, "damaged_ratio": 0.4, "protein": 13.8,
+     "test_weight": 780, "grade": "一等", "inspector": "张工", "date": "2024-03-20"},
+    {"id": "Q-2403", "silo_id": "S-02", "grain_type": "小麦", "batch": "B20240210",
+     "moisture": 12.5, "impurity": 1.5, "damaged_ratio": 0.8, "protein": 12.8,
+     "test_weight": 758, "grade": "二等", "inspector": "李工", "date": "2024-02-10"},
+    {"id": "Q-2404", "silo_id": "S-05", "grain_type": "小麦", "batch": "B20240120",
+     "moisture": 12.2, "impurity": 1.4, "damaged_ratio": 0.6, "protein": 13.2,
+     "test_weight": 765, "grade": "二等", "inspector": "王工", "date": "2024-01-20"},
+    {"id": "Q-2405", "silo_id": "S-07", "grain_type": "小麦", "batch": "B20240305",
+     "moisture": 11.8, "impurity": 0.9, "damaged_ratio": 0.3, "protein": 14.0,
+     "test_weight": 785, "grade": "一等", "inspector": "张工", "date": "2024-03-05"},
+    {"id": "Q-2406", "silo_id": "S-10", "grain_type": "小麦", "batch": "B20240225",
+     "moisture": 12.1, "impurity": 1.1, "damaged_ratio": 0.5, "protein": 13.6,
+     "test_weight": 778, "grade": "一等", "inspector": "李工", "date": "2024-02-25"},
+    # 稻谷
+    {"id": "Q-2407", "silo_id": "S-03", "grain_type": "稻谷", "batch": "B20240110",
+     "moisture": 13.8, "impurity": 1.3, "damaged_ratio": 0.7, "brown_rice_rate": 78.5,
+     "test_weight": 560, "grade": "二等", "inspector": "赵工", "date": "2024-01-10"},
+    {"id": "Q-2408", "silo_id": "S-03", "grain_type": "稻谷", "batch": "B20240315",
+     "moisture": 14.0, "impurity": 1.5, "damaged_ratio": 0.9, "brown_rice_rate": 77.2,
+     "test_weight": 555, "grade": "三等", "inspector": "赵工", "date": "2024-03-15"},
+    {"id": "Q-2409", "silo_id": "S-03", "grain_type": "稻谷", "batch": "B20240420",
+     "moisture": 14.2, "impurity": 1.8, "damaged_ratio": 1.1, "brown_rice_rate": 76.5,
+     "test_weight": 548, "grade": "三等", "inspector": "赵工", "date": "2024-04-20"},
+    {"id": "Q-2410", "silo_id": "S-04", "grain_type": "稻谷", "batch": "B20240220",
+     "moisture": 11.5, "impurity": 0.8, "damaged_ratio": 0.3, "brown_rice_rate": 80.2,
+     "test_weight": 572, "grade": "一等", "inspector": "钱工", "date": "2024-02-20"},
+    {"id": "Q-2411", "silo_id": "S-04", "grain_type": "稻谷", "batch": "B20240401",
+     "moisture": 11.6, "impurity": 0.9, "damaged_ratio": 0.4, "brown_rice_rate": 79.8,
+     "test_weight": 570, "grade": "一等", "inspector": "钱工", "date": "2024-04-01"},
+    {"id": "Q-2412", "silo_id": "S-09", "grain_type": "稻谷", "batch": "B20240301",
+     "moisture": 14.2, "impurity": 2.1, "damaged_ratio": 1.5, "brown_rice_rate": 74.8,
+     "test_weight": 535, "grade": "三等", "inspector": "孙工", "date": "2024-03-01"},
+    # 玉米
+    {"id": "Q-2413", "silo_id": "S-06", "grain_type": "玉米", "batch": "B20240125",
+     "moisture": 13.0, "impurity": 1.0, "damaged_ratio": 0.8, "protein": 9.5,
+     "test_weight": 725, "grade": "一等", "inspector": "周工", "date": "2024-01-25"},
+    {"id": "Q-2414", "silo_id": "S-08", "grain_type": "玉米", "batch": "B20240228",
+     "moisture": 12.8, "impurity": 1.6, "damaged_ratio": 1.2, "protein": 9.0,
+     "test_weight": 695, "grade": "二等", "inspector": "吴工", "date": "2024-02-28"},
+    {"id": "Q-2415", "silo_id": "S-11", "grain_type": "玉米", "batch": "B20240310",
+     "moisture": 12.6, "impurity": 1.4, "damaged_ratio": 1.0, "protein": 9.2,
+     "test_weight": 700, "grade": "二等", "inspector": "吴工", "date": "2024-03-10"},
+]
+
+
+def query_quality_records(
+    silo_id: Optional[str] = None,
+    grain_type: Optional[str] = None,
+    batch: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> list[dict]:
+    """按条件查询质检记录"""
+    results = list(QUALITY_RECORDS)
+    if silo_id:
+        results = [r for r in results if r["silo_id"] == silo_id]
+    if grain_type:
+        results = [r for r in results if r["grain_type"] == grain_type]
+    if batch:
+        results = [r for r in results if batch.lower() in r["batch"].lower()]
+    if start_date:
+        results = [r for r in results if r["date"] >= start_date]
+    if end_date:
+        results = [r for r in results if r["date"] <= end_date]
+    return results
+
+
+def get_quality_stats(grain_type: Optional[str] = None) -> dict:
+    """统计质量数据：等级分布、指标均值"""
+    records = list(QUALITY_RECORDS)
+    if grain_type:
+        records = [r for r in records if r["grain_type"] == grain_type]
+
+    if not records:
+        return {"error": "没有匹配的质检记录"}
+
+    # 等级分布
+    grade_dist = {}
+    for r in records:
+        g = r["grade"]
+        grade_dist[g] = grade_dist.get(g, 0) + 1
+
+    # 各指标均值（仅对共有的数值字段统计）
+    # 小麦/玉米有 test_weight/protein，稻谷有 brown_rice_rate
+    numeric_keys = ["moisture", "impurity", "damaged_ratio", "test_weight"]
+    avg = {}
+    for key in numeric_keys:
+        vals = [r[key] for r in records if key in r]
+        if vals:
+            avg[key] = round(sum(vals) / len(vals), 2)
+
+    # 稻谷特有指标
+    brr_vals = [r["brown_rice_rate"] for r in records if "brown_rice_rate" in r]
+    if brr_vals:
+        avg["brown_rice_rate"] = round(sum(brr_vals) / len(brr_vals), 2)
+
+    # 蛋白质
+    prot_vals = [r["protein"] for r in records if "protein" in r]
+    if prot_vals:
+        avg["protein"] = round(sum(prot_vals) / len(prot_vals), 2)
+
+    return {
+        "total_records": len(records),
+        "grade_distribution": grade_dist,
+        "average_indicators": avg,
+    }
+
+
+def get_quality_alerts() -> list[dict]:
+    """检查质量异常预警"""
+    alerts = []
+    for r in QUALITY_RECORDS:
+        reasons = []
+        gt = r["grain_type"]
+        m = r["moisture"]
+        imp = r["impurity"]
+        dr = r["damaged_ratio"]
+
+        # 小麦水分安全线 ≤ 12.5%
+        if gt == "小麦" and m > 12.5:
+            reasons.append(f"水分 {m}% 超标（≤12.5%）")
+        # 稻谷 ≤ 13.5%
+        if gt == "稻谷" and m > 13.5:
+            reasons.append(f"水分 {m}% 超标（≤13.5%）")
+        # 玉米 ≤ 14.0%
+        if gt == "玉米" and m > 14.0:
+            reasons.append(f"水分 {m}% 超标（≤14.0%）")
+        # 杂质 > 2.0% 预警
+        if imp > 2.0:
+            reasons.append(f"杂质 {imp}% 偏高")
+        # 不完善粒 > 8.0% 预警
+        if dr > 8.0:
+            reasons.append(f"不完善粒 {dr}% 偏高")
+
+        if reasons:
+            alerts.append({
+                "record_id": r["id"],
+                "silo_id": r["silo_id"],
+                "grain_type": r["grain_type"],
+                "batch": r["batch"],
+                "date": r["date"],
+                "grade": r["grade"],
+                "issues": reasons,
+            })
+    return alerts

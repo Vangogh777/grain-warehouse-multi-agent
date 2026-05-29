@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><title>项目架构与功能总览</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1a2e;color:#dce6f0;font-family:'Segoe UI','PingFang SC',sans-serif;padding:30px 40px;max-width:1000px;margin:0 auto;line-height:1.8}
+h1{font-size:26px;margin-bottom:4px;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:rgba(200,214,229,.3);font-size:13px;margin-bottom:20px;border-bottom:1px solid rgba(0,180,255,.08);padding-bottom:10px}
+h2{font-size:18px;margin:24px 0 10px;color:#e0ecff;border-left:3px solid #40c8ff;padding-left:10px}
+h3{font-size:15px;margin:16px 0 6px;color:#40c8ff}
+.card{background:rgba(20,35,60,.5);border:1px solid rgba(0,180,255,.08);border-radius:10px;padding:16px 20px;margin:10px 0}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th,.card td{padding:6px 10px;border:1px solid rgba(0,180,255,.06);text-align:left}
+.card th{background:rgba(0,180,255,.06);color:#40c8ff;font-weight:600}
+.card td{background:rgba(0,180,255,.02)}
+code{background:rgba(0,180,255,.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#40c8ff}
+pre{background:rgba(0,0,0,.3);border:1px solid rgba(0,180,255,.06);border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:12px;line-height:1.5}
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;margin-right:4px}
+.tag.g{background:rgba(0,255,136,.12);color:#40ffa0}
+.tag.b{background:rgba(0,180,255,.12);color:#40c8ff}
+</style>
+</head>
+<body>
+
+<h1>🌾 粮库仓储多智能体系统</h1>
+<div class="sub">Grain Storage Multi-Agent System · 项目架构与功能总览</div>
+
+<h2>一、系统架构图</h2>
+
+<div class="card">
+<pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                        前端 (index.html)                         │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐   │
+│  │ 角色切换  │ │ 模型选择  │ │ 历史面板  │ │ DAG 推理链路可视化│   │
+│  │ 🔧/📋/🧪 │ │ V3/Flash │ │ 📜会话   │ │ 📊 工具调用图    │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘   │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ HTTP/SSE
+┌────────────────────────▼────────────────────────────────────────┐
+│                    FastAPI Server (src/api/server.py)             │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ /api/query   │ │ /api/debate  │ │/api/trace│ │/api/hist │   │
+│  │ 普通问答(流式)│ │ 多Agent辩论  │ │ DAG 数据 │ │ 历史记录  │   │
+│  └──────┬───────┘ └──────┬───────┘ └──────────┘ └──────────┘   │
+└─────────┼─────────────────┼─────────────────────────────────────┘
+          │                 │
+┌─────────▼─────────────────▼─────────────────────────────────────┐
+│                    LangGraph 编排器                               │
+│         src/orchestrator/graph_orchestrator.py                    │
+│                                                                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────────┐   │
+│  │ Router   │─▶│ Agent A  │─▶│ Agent B  │─▶│  Aggregator    │   │
+│  │ 意图识别 │  │ 粮情分析  │  │ 智能作业  │  │  结果聚合      │   │
+│  └──────────┘  └──────────┘  └──────────┘  └────────────────┘   │
+│       │              │            │               │              │
+│       ▼              ▼            ▼               ▼              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │ 出入库   │  │ 报表分析  │  │质量检测  │  │ Debate   │        │
+│  │ Agent    │  │ Agent    │  │ Agent    │  │ 辩论投票  │        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+└──────────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                        Tool 层 (src/tools/)                       │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐   │
+│  │传感器查询 │ │ 设备控制  │ │ 天气/电价 │ │ 质检记录查询     │   │
+│  │sensor    │ │ device   │ │ weather  │ │ quality_tools    │   │
+│  ├──────────┤ ├──────────┤ ├──────────┤ ├──────────────────┤   │
+│  │出入库管理│ │ 报表分析  │ │ RAG 检索  │ │ 记忆管理         │   │
+│  │inout    │ │ report   │ │ rag_tool │ │ memory.py        │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    数据层                                          │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
+│  │ Mock 数据    │ │ ChromaDB     │ │ SQLite       │             │
+│  │ 12个仓房模拟 │ │ RAG 知识库   │ │ 记忆+可观测  │             │
+│  │ 传感器/天气  │ │ 国标文档检索  │ │ 对话存储+追踪│             │
+│  └──────────────┘ └──────────────┘ └──────────────┘             │
+└──────────────────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<h2>二、文件结构</h2>
+
+<div class="card">
+<table>
+<tr><th>路径</th><th>功能</th></tr>
+<tr><td><code>src/agents/</code></td><td>5 个 Agent + 基类 + 桥接层</td></tr>
+<tr><td><code>src/orchestrator/</code></td><td>LangGraph 编排器 + Debate 辩论器</td></tr>
+<tr><td><code>src/tools/</code></td><td>15+ 工具 + Mock 数据 + RAG + 记忆 + 可观测性</td></tr>
+<tr><td><code>src/api/</code></td><td>FastAPI 服务（REST + SSE 流式）</td></tr>
+<tr><td><code>src/models/</code></td><td>Pydantic 结构化输出模型</td></tr>
+<tr><td><code>src/rag_docs/</code></td><td>国标知识文档（4份）</td></tr>
+<tr><td><code>doc/</code></td><td>设计文档</td></tr>
+<tr><td><code>index.html</code></td><td>前端聊天界面</td></tr>
+<tr><td><code>dashboard.html</code></td><td>3D 数字孪生大屏</td></tr>
+</table>
+</div>
+
+<h2>三、功能清单</h2>
+
+<div class="card">
+<table>
+<tr><th>模块</th><th>功能</th><th>技术点</th></tr>
+<tr><td rowspan="3">Multi-Agent</td><td>5 个专业 Agent 协同工作</td><td>LangChain AgentExecutor</td></tr>
+<tr><td>LangGraph 状态机编排</td><td>StateGraph + 条件路由</td></tr>
+<tr><td>Agent 辩论投票</td><td>并行推理 + 加权投票</td></tr>
+<tr><td rowspan="2">RAG</td><td>国标知识库检索</td><td>ChromaDB + Embedding</td></tr>
+<tr><td>Hybrid Search</td><td>向量 + BM25 融合</td></tr>
+<tr><td rowspan="2">记忆</td><td>对话持久化 + 历史注入</td><td>SQLite + Prompt 拼接</td></tr>
+<tr><td>语义召回 + 自动压缩</td><td>ChromaDB 向量 + LLM 摘要</td></tr>
+<tr><td rowspan="3">可观测性</td><td>全链路 Token 追踪</td><td>SQLite + trace_id</td></tr>
+<tr><td>工具调用 DAG 可视化</td><td>前端 Canvas 链路图</td></tr>
+<tr><td>请求日志</td><td>每次请求完整记录</td></tr>
+<tr><td rowspan="2">前端</td><td>流式 thinking 事件</td><td>SSE + 逐步渲染</td></tr>
+<tr><td>角色切换 + 模型切换</td><td>Prompt 注入 + 运行时切换 LLM</td></tr>
+<tr><td rowspan="2">流式</td><td>SSE 实时推理展示</td><td>FastAPI StreamingResponse</td></tr>
+<tr><td>多 Agent 并行 Stream</td><td>逐步 yield thinking/done</td></tr>
+<tr><td rowspan="2">结构化输出</td><td>Agent 返回 Pydantic 模型</td><td>Pydantic Output Parser</td></tr>
+<tr><td>前端直接渲染表格</td><td>Markdown → HTML</td></tr>
+</table>
+</div>
+</body>
+</html>

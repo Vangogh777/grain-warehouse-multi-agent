@@ -3,6 +3,7 @@ from src.agents.base_agent import BaseGrainAgent
 from src.tools.sensor_tools import SensorDataTool, SiloInfoTool
 from src.tools.weather_tools import WeatherTool, ElectricityPriceTool
 from src.tools.device_tools import CheckDeviceTool, ControlDeviceTool
+from src.tools.rag_tool import QueryKnowledgeTool
 
 # 智能作业 Agent 系统提示词
 OPERATION_PROMPT = """
@@ -43,6 +44,7 @@ def create_operation_agent(llm=None) -> BaseGrainAgent:
         ElectricityPriceTool(),
         CheckDeviceTool(),
         ControlDeviceTool(),
+        QueryKnowledgeTool(),
     ]
     return BaseGrainAgent(
         name="智能作业",

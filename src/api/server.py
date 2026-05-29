@@ -14,16 +14,22 @@ from src.agents.grain_condition import create_grain_condition_agent
 from src.agents.operation import create_operation_agent
 from src.agents.inoutbound import create_inoutbound_agent
 from src.agents.report import create_report_agent
-from src.orchestrator.orchestrator import GrainOrchestrator
+from src.agents.quality import create_quality_agent
+from src.orchestrator.graph_orchestrator import LangGraphOrchestrator
+from src.orchestrator.debate import DebateOrchestrator
 
 app = FastAPI(title="粮库多智能体系统 API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-_orchestrator: Optional[GrainOrchestrator] = None
+_orchestrator: Optional[LangGraphOrchestrator] = None
+_debater: Optional[DebateOrchestrator] = None
 
 
 class QueryRequest(BaseModel):
     query: str
+    role: str = "keeper"
+    session_id: str = "default"
+    model: str = ""
 
 
 class QueryResponse(BaseModel):
@@ -41,17 +47,28 @@ async def startup():
     op = create_operation_agent()
     io = create_inoutbound_agent()
     rpt = create_report_agent()
-    _orchestrator = GrainOrchestrator()
+    qual = create_quality_agent()
+    _orchestrator = LangGraphOrchestrator()
     _orchestrator.register_agent(grain)
     _orchestrator.register_agent(op)
     _orchestrator.register_agent(io)
     _orchestrator.register_agent(rpt)
+    _orchestrator.register_agent(qual)
+
+    # 初始化辩论器
+    global _debater
+    _debater = DebateOrchestrator()
+    _debater.register_agent(grain)
+    _debater.register_agent(op)
+    _debater.register_agent(io)
+    _debater.register_agent(rpt)
+    _debater.register_agent(qual)
 
 
 @app.get("/")
 async def root():
     return {"service": "粮库多智能体系统", "status": "running",
-            "agents": ["粮情分析", "智能作业", "出入库", "报表分析"]}
+            "agents": ["粮情分析", "智能作业", "出入库", "报表分析", "质量检测"]}
 
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -59,7 +76,7 @@ async def query(req: QueryRequest):
     if not _orchestrator:
         raise HTTPException(status_code=503, detail="系统未初始化")
     try:
-        result = await _orchestrator.process(req.query)
+        result = await _orchestrator.process(req.query, role=req.role, session_id=req.session_id, model=req.model)
         return QueryResponse(
             answer=result["answer"],
             agents_used=result["agents_used"],
@@ -83,7 +100,7 @@ async def query_stream(req: QueryRequest):
     if not _orchestrator:
         raise HTTPException(status_code=503, detail="系统未初始化")
     async def event_stream():
-        async for event in _orchestrator.process_stream(req.query):
+        async for event in _orchestrator.process_stream(req.query, role=req.role, session_id=req.session_id, model=req.model):
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -121,3 +138,39 @@ async def get_all_silos():
 async def refresh():
     refresh_sensor_data()
     return {"status": "ok", "message": "传感器数据已刷新"}
+
+
+@app.get("/api/history")
+async def get_history(session_id: str = "default", limit: int = 20):
+    """获取对话历史"""
+    from src.tools.memory import get_conversation_list
+    items = get_conversation_list(session_id, limit)
+    return {"session_id": session_id, "count": len(items), "items": items}
+
+
+@app.post("/api/debate")
+async def debate(req: QueryRequest):
+    """多 Agent 辩论"""
+    if not _debater:
+        raise HTTPException(status_code=503, detail="辩论器未初始化")
+    try:
+        result = await _debater.debate(req.query, role=req.role, session_id=req.session_id, model=req.model)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/trace/{request_id}")
+async def get_trace(request_id: str):
+    """获取工具调用 DAG 数据"""
+    from src.tools.observability import get_trace_dag
+    nodes = get_trace_dag(request_id)
+    return {"request_id": request_id, "nodes": nodes, "count": len(nodes)}
+
+
+@app.get("/api/sessions")
+async def get_sessions():
+    """获取所有会话列表"""
+    from src.tools.memory import get_all_sessions
+    sessions = get_all_sessions()
+    return {"sessions": sessions}

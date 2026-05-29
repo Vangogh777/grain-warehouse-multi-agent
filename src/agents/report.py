@@ -2,6 +2,7 @@
 from src.agents.base_agent import BaseGrainAgent
 from src.tools.report_tools import QueryInventoryTool, QueryTrendTool, GenerateReportTool, AnalyzeAnomalyTool
 from src.tools.sensor_tools import SensorDataTool, SiloInfoTool
+from src.tools.rag_tool import QueryKnowledgeTool
 
 REPORT_PROMPT = """
 你是一个粮库报表分析专家，负责数据查询、报表生成和趋势分析。
@@ -27,6 +28,7 @@ def create_report_agent(llm=None) -> BaseGrainAgent:
         AnalyzeAnomalyTool(),
         SensorDataTool(),
         SiloInfoTool(),
+        QueryKnowledgeTool(),
     ]
     return BaseGrainAgent(
         name="报表分析",

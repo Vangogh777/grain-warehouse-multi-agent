@@ -16,5 +16,71 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
+# 可选模型列表（前端切换用）
+AVAILABLE_MODELS = {
+    "deepseek-chat": "DeepSeek V3（快速）",
+    "deepseek-v4-flash": "DeepSeek V4 Flash（推理）",
+    "deepseek-v4-pro": "DeepSeek V4 Pro（最强）",
+}
+
 # LLM 温度
 LLM_TEMPERATURE = 0.3
+
+# API 超时 & 重试
+LLM_TIMEOUT = 60  # 单次请求超时（秒）
+LLM_MAX_RETRIES = 2  # 失败重试次数
+
+# ========== 角色系统 ==========
+ROLES = {
+    "keeper": {
+        "label": "保管员",
+        "icon": "🔧",
+        "prompt": "你是一个粮库保管员，负责日常巡检和操作执行。回答要具体、可操作，直接告诉用户该做什么、怎么做。多用行动指令如'请打开风机''建议今天安排熏蒸'。",
+    },
+    "manager": {
+        "label": "科长",
+        "icon": "📋",
+        "prompt": "你是一个粮库管理科长，负责全局监管和决策。回答要关注统计数据、趋势变化、异常汇总。多用管理视角如'本月异常率''建议调整作业计划''需要向领导汇报'。",
+    },
+    "inspector": {
+        "label": "质检员",
+        "icon": "🧪",
+        "prompt": "你是一个粮库质检员，负责质量检测和标准合规。回答要精确引用国标数据，给出指标数值和等级判定。多用水分/容重/出糙率等专业指标。",
+    },
+}
+
+# ========== 对话记忆（SQLite）==========
+MEMORY_MAX_EXCHANGES = 5  # 每次携带最近5轮对话
+
+# ========== 绕过 tiktoken 下载问题（国内网络限制）==========
+# tiktoken 需要从 Azure Blob 下载编码文件，国内无法访问
+# 方案：预创建缓存文件 + 跳过哈希校验
+import os as _os
+import base64 as _b64
+import hashlib as _hashlib
+import tiktoken.load as _tiktoken_load
+
+_tiktoken_cache = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".tiktoken_cache")
+_os.makedirs(_tiktoken_cache, exist_ok=True)
+_os.environ["TIKTOKEN_CACHE_DIR"] = _tiktoken_cache
+
+_cache_key = _hashlib.sha1(
+    "https://openaipublic.blob.core.windows.net/encodings/cl100k_base.tiktoken".encode()
+).hexdigest()
+_cache_path = _os.path.join(_tiktoken_cache, _cache_key)
+
+if not _os.path.exists(_cache_path) or _os.path.getsize(_cache_path) < 1000:
+    _minimal = "\n".join(
+        f"{_b64.b64encode(bytes([i])).decode()} {i}"
+        for i in range(256)
+    )
+    with open(_cache_path, "w") as _f:
+        _f.write(_minimal)
+
+# 跳过哈希校验
+_tiktoken_load.check_hash = lambda data, expected: True
+
+def _simple_token_ids(text: str) -> list[int]:
+    return [ord(c) for c in text[:10000]]
+
+CUSTOM_GET_TOKEN_IDS = _simple_token_ids

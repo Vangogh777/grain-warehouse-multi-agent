@@ -1,6 +1,7 @@
 """粮情分析 Agent — 传感器数据采集、异常检测、趋势预测"""
 from src.agents.base_agent import BaseGrainAgent
 from src.tools.sensor_tools import SensorDataTool, SiloInfoTool
+from src.tools.rag_tool import QueryKnowledgeTool
 
 # 粮情分析 Agent 系统提示词
 GRAIN_CONDITION_PROMPT = """
@@ -32,6 +33,7 @@ def create_grain_condition_agent(llm=None) -> BaseGrainAgent:
     tools = [
         SensorDataTool(),
         SiloInfoTool(),
+        QueryKnowledgeTool(),
     ]
     return BaseGrainAgent(
         name="粮情分析",

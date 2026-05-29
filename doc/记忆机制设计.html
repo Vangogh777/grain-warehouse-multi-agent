@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>记忆机制设计文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1a2e;color:#dce6f0;font-family:'Segoe UI','PingFang SC',sans-serif;padding:30px 40px;max-width:900px;margin:0 auto;line-height:1.8}
+h1{font-size:24px;margin-bottom:6px;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:rgba(200,214,229,.4);font-size:13px;margin-bottom:24px;border-bottom:1px solid rgba(0,180,255,.1);padding-bottom:12px}
+h2{font-size:18px;margin:28px 0 12px;color:#e0ecff;border-left:3px solid #40c8ff;padding-left:10px}
+h3{font-size:15px;margin:20px 0 8px;color:#40c8ff}
+.badge{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-right:6px}
+.badge.green{background:rgba(0,255,136,.15);color:#40ffa0}
+.badge.yellow{background:rgba(255,165,0,.15);color:#ffa500}
+.badge.red{background:rgba(255,50,50,.15);color:#ff6b6b}
+.badge.blue{background:rgba(0,180,255,.15);color:#40c8ff}
+.card{background:rgba(20,35,60,.5);border:1px solid rgba(0,180,255,.1);border-radius:10px;padding:16px 20px;margin:12px 0}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th,.card td{padding:8px 10px;border:1px solid rgba(0,180,255,.08);text-align:left}
+.card th{background:rgba(0,180,255,.06);color:#40c8ff;font-weight:600}
+.card td{background:rgba(0,180,255,.02)}
+code{background:rgba(0,180,255,.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#40c8ff}
+pre{background:rgba(0,0,0,.3);border:1px solid rgba(0,180,255,.06);border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:12px;line-height:1.5;margin:8px 0}
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px;background:rgba(0,180,255,.04);border-radius:8px;font-size:12px}
+.flow span{padding:4px 10px;border-radius:4px;background:rgba(0,180,255,.08);color:#40c8ff}
+.flow .arrow{background:transparent;color:rgba(200,214,229,.3);padding:0}
+</style>
+</head>
+<body>
+
+<h1>🧠 记忆机制设计方案</h1>
+<div class="sub">粮库多智能体系统 · 对话记忆模块</div>
+
+<h2>一、现状分析</h2>
+
+<div class="card">
+<p><span class="badge green">已有</span> 基础记忆机制已在 <code>src/tools/memory.py</code> 中实现</p>
+<table>
+<tr><th>维度</th><th>当前状态</th><th>评级</th></tr>
+<tr><td>持久化</td><td>SQLite 存储，重启不丢失</td><td><span class="badge green">✅</span></td></tr>
+<tr><td>历史注入</td><td>最近 5 轮以纯文本拼入 prompt</td><td><span class="badge green">✅</span></td></tr>
+<tr><td>多会话隔离</td><td>按 <code>session_id</code> 区分</td><td><span class="badge green">✅</span></td></tr>
+<tr><td>记忆压缩</td><td>无——超过 5 轮直接丢弃</td><td><span class="badge yellow">⚠️</span></td></tr>
+<tr><td>向量召回</td><td>无——只能顺序回溯</td><td><span class="badge red">❌</span></td></tr>
+<tr><td>记忆编辑</td><td>无——不能删除或修正记忆</td><td><span class="badge red">❌</span></td></tr>
+<tr><td>记忆持久化到知识库</td><td>无——Agent 不能主动存记忆</td><td><span class="badge red">❌</span></td></tr>
+</table>
+</div>
+
+<h2>二、升级方案</h2>
+
+<h3>方案 A：记忆压缩（短期，1 天）</h3>
+<div class="card">
+<p>当对话轮数超过阈值时，用 LLM 对历史做一次摘要压缩，保留关键信息而不是简单截断。</p>
+
+<div class="flow">
+<span>用户提问</span>
+<span class="arrow">→</span>
+<span>检查历史 > 10轮？</span>
+<span class="arrow">→</span>
+<span>是 → 调用 LLM 压缩旧对话</span>
+<span class="arrow">→</span>
+<span>存入 compressed_summary</span>
+<span class="arrow">→</span>
+<span>保留最近 5 轮 + 摘要</span>
+</div>
+
+<pre>
+// memory.py 新增
+def summarize_history(session_id: str) -> str:
+    history = get_all_history(session_id)
+    if len(history) <= 5:
+        return ""
+    # 调用 LLM 压缩
+    summary = llm.invoke(f"压缩以下对话为 100 字摘要：{history[:-5]}")
+    save_summary(session_id, summary.content)
+    return summary.content
+</pre>
+
+<table>
+<tr><th>优点</th><th>缺点</th></tr>
+<tr><td>实现简单，2~3 个函数</td><td>需要额外 LLM 调用，增加成本</td></tr>
+<tr><td>token 消耗大幅降低</td><td>摘要可能丢失细节</td></tr>
+</table>
+</div>
+
+<h3>方案 B：向量记忆召回（中期，2 天）</h3>
+<div class="card">
+<p>每轮对话做 embedding 存入 ChromaDB，新问题来的时候用语义相似度召回相关历史，而不是只看最近的 N 轮。</p>
+
+<div class="flow">
+<span>用户提问</span>
+<span class="arrow">→</span>
+<span>ChromaDB 检索相似历史</span>
+<span class="arrow">→</span>
+<span>召回 top-3 相关对话</span>
+<span class="arrow">→</span>
+<span>拼入 prompt</span>
+</div>
+
+<pre>
+# memory.py 新增
+def save_to_vector(session_id, query, answer):
+    text = f"用户：{query}\nAI：{answer}"
+    vectorstore.add_texts([text], metadatas=[{"session": session_id}])
+
+def recall_memory(query, session_id, k=3):
+    docs = vectorstore.similarity_search(query, k=k, filter={"session": session_id})
+    return [d.page_content for d in docs]
+</pre>
+
+<table>
+<tr><th>优点</th><th>缺点</th></tr>
+<tr><td>语义召回，不依赖顺序</td><td>需要 embedding 模型（可复用已有 ChromaDB）</td></tr>
+<tr><td>用户问"之前说的那个问题"也能命中</td><td>首次 embedding 有延迟</td></tr>
+</table>
+</div>
+
+<h3>方案 C：Agent 主动记忆（长期，3 天）</h3>
+<div class="card">
+<p>Agent 通过工具主动决定"这件事值得记住"，而不是被动记录所有对话。类似 MemGPT/Letta 的思路。</p>
+
+<pre>
+class RememberTool(BaseTool):
+    name = "remember_this"
+    description = "记住一条重要信息供后续参考"
+    def _run(self, key: str, value: str):
+        memory_store[key] = value
+        return "已记住"
+
+class RecallTool(BaseTool):
+    name = "recall_memory"
+    description = "回忆之前记住的信息"
+    def _run(self, query: str):
+        return vectorstore.similarity_search(query)
+</pre>
+
+<p>场景示例：</p>
+<pre>
+用户：S-07 的通风管道上个月维修过
+Agent：→ 调用 remember_this("S-07通风管道维修", "2024年3月维修过")
+    ↓
+两周后：
+用户：S-07通风有什么要注意的？
+Agent：→ 调用 recall_memory("S-07通风")
+    → 返回"2024年3月维修过通风管道"
+    → 回答时主动提及
+</pre>
+</div>
+
+<h2>三、推荐路线</h2>
+
+<div class="card">
+<table>
+<tr><th>优先级</th><th>方案</th><th>时间</th><th>面试价值</th></tr>
+<tr><td><span class="badge green">P0</span></td><td>方案 A：记忆压缩</td><td>0.5 天</td><td>⭐⭐⭐</td></tr>
+<tr><td><span class="badge blue">P1</span></td><td>方案 B：向量召回</td><td>1 天</td><td>⭐⭐⭐⭐⭐</td></tr>
+<tr><td><span class="badge yellow">P2</span></td><td>方案 C：Agent 主动记忆</td><td>2 天</td><td>⭐⭐⭐⭐⭐</td></tr>
+</table>
+
+<p><strong>建议：</strong>先做 P0（压缩）+ P1（向量召回），这两个可以共用已有的 ChromaDB 基础设施，性价比最高。做完后面试可以讲：</p>
+
+<blockquote style="border-left:3px solid #40c8ff;padding-left:14px;margin:10px 0;opacity:.85">
+"我实现了多级记忆系统：短期记忆用滑动窗口保留最近 N 轮，长期记忆用向量库做语义召回，支持跨会话关联。每个记忆条目有时间戳和关联的 Agent 信息，Agent 也可以通过工具主动决定什么值得记住。"
+</blockquote>
+</div>
+
+<h2>四、当前代码文件清单</h2>
+
+<div class="card">
+<table>
+<tr><th>文件</th><th>用途</th><th>状态</th></tr>
+<tr><td><code>src/tools/memory.py</code></td><td>SQLite 存储 + 历史读取</td><td><span class="badge green">已实现</span></td></tr>
+<tr><td><code>src/config.py</code></td><td><code>MEMORY_MAX_EXCHANGES=5</code></td><td><span class="badge green">已配置</span></td></tr>
+<tr><td><code>src/orchestrator/graph_orchestrator.py</code></td><td>process/process_stream 中调用记忆注入 + 存储</td><td><span class="badge green">已集成</span></td></tr>
+<tr><td><code>.memory.db</code></td><td>SQLite 数据库文件（运行后自动生成）</td><td><span class="badge green">运行生成</span></td></tr>
+</table>
+</div>
+
+</body>
+</html>

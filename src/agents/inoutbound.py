@@ -2,6 +2,7 @@
 from src.agents.base_agent import BaseGrainAgent
 from src.tools.inout_tools import QueryInboundsTool, QueryOutboundsTool, GetScaleTool, AllocateSiloTool, SettlementTool
 from src.tools.sensor_tools import SiloInfoTool
+from src.tools.rag_tool import QueryKnowledgeTool
 
 INOUT_PROMPT = """
 你是一个粮库出入库管理专家，负责粮食入库和出库的全流程管理。
@@ -31,6 +32,7 @@ def create_inoutbound_agent(llm=None) -> BaseGrainAgent:
         AllocateSiloTool(),
         SettlementTool(),
         SiloInfoTool(),
+        QueryKnowledgeTool(),
     ]
     return BaseGrainAgent(
         name="出入库",
