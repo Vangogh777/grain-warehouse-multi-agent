@@ -696,7 +696,7 @@ let currentRid='';
     }
   }catch(e){
     hideTyping();
-    addMsg('sys',`<div style="color:#ff6b6b">❌ 请求失败: ${e.message}<br><br><span style="font-size:12px;color:rgba(200,214,229,.4)">确保后端已启动: <b>uvicorn src.api.server:app --reload --port 8000</b></span></div>`);
+    addMsg('sys',`<div style="color:#ff6b6b">❌ 请求失败: ${e.message}<br><br><span style="font-size:12px;color:rgba(200,214,229,.4)">确保后端已启动: <b>uvicorn src.api.server:app --port 8080</b></span></div>`);
   }
   sendBtn.disabled=false;
 }
@@ -723,7 +723,7 @@ Qs.forEach(q=>{
 });
 
 // Welcome
-addMsg('sys','👋 欢迎使用粮库多智能体系统！<br><br>输入问题或点击快捷按钮，系统会通过 <b>DeepSeek API</b> 调度多个 Agent 并行分析。<br><br><span style="font-size:12px;color:rgba(200,214,229,.25)">💡 确保后端已启动: <code>uvicorn src.api.server:app --reload --port 8000</code></span>');
+addMsg('sys','👋 欢迎使用粮库多智能体系统！<br><br>输入问题或点击快捷按钮，系统会通过 <b>多模型 API</b> 调度多个 Agent 并行分析。<br><br><span style="font-size:12px;color:rgba(200,214,229,.25)">💡 确保后端已启动: <code>uvicorn src.api.server:app --port 8080</code></span>');
 
 // ========== History Panel ==========
 let historyOpen=true;
