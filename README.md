@@ -1,5 +1,15 @@
 # 🌾 粮库仓储多智能体系统
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?logo=python">
+  <img src="https://img.shields.io/badge/LangChain-0.2-green?logo=langchain">
+  <img src="https://img.shields.io/badge/LangGraph-0.2-purple">
+  <img src="https://img.shields.io/badge/FastAPI-0.100-teal?logo=fastapi">
+  <img src="https://img.shields.io/badge/DeepSeek-API-orange">
+  <img src="https://img.shields.io/badge/GLM--5-supported-brightgreen">
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey">
+</p>
+
 基于 **LangChain** + **LangGraph** + **FastAPI** 的多智能体粮库管理系统。
 5 个专业 Agent 协同工作，覆盖粮情分析、智能作业、出入库管理、质量检测、报表分析全流程。
 
@@ -194,6 +204,15 @@ grain-warehouse-multi-agent/
 | 通风条件判断 | 5~8 秒 | 20~30 秒 |
 | 出入库日报 | 6~10 秒 | 20~25 秒 |
 | 多 Agent 辩论 | 8~15 秒 | 30~45 秒 |
+
+## 🎬 面试演示场景
+
+| 场景 | 演示什么 | 话术要点 |
+|:----|:---------|:---------|
+| S-07 通风条件判断 | 多 Agent 并行 + 工具调用 | "粮情查数据 + 作业查天气/电价/设备 → 综合决策" |
+| 今天出入库情况 | 业务 Agent + 结构化输出 | "出入库 Agent 查订单、地磅、仓房、结算" |
+| 小麦一等容重要求 | RAG 知识库检索 | "国标文档 → BM25 召回 → Agent 回答" |
+| S-07 是否需要熏蒸 | 辩论机制 | "三个 Agent 各自分析 → 投票 → 结论" |
 
 ## 🔐 安全
 

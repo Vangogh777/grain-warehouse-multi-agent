@@ -11,10 +11,18 @@ if os.path.exists(_env_path):
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip())
 
+# LLM 后端选择: openai / anthropic
+LLM_BACKEND = os.getenv("LLM_BACKEND", "openai")
+
 # DeepSeek API 配置（OpenAI 兼容接口）
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+# Anthropic 兼容配置（GLM-5 等）
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "https://aicoding.bwits.cn:90/anthropic")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "glm-5")
 
 # 可选模型列表（前端切换用）
 AVAILABLE_MODELS = {
@@ -41,13 +49,42 @@ REASONING_MODELS = {"deepseek-v4-flash", "deepseek-v4-pro", "glm-5"}
 
 # 推理模型对应的工具调用模型（快模型，非推理）
 TOOL_MODEL_MAP = {
-    "glm-5": "deepseek-chat",        # GLM-5 分析，DeepSeek V3 调工具
+    "glm-5": "deepseek-chat",         # GLM-5 推理 → DeepSeek V3 调工具
+    "deepseek-v4-flash": "deepseek-chat",
+    "deepseek-v4-pro": "deepseek-chat",
     "deepseek-v4-flash": "deepseek-chat",
     "deepseek-v4-pro": "deepseek-chat",
 }
 
 # LLM 温度
 LLM_TEMPERATURE = 0.3
+
+# LLM 工厂 — 根据模型名自动选择后端
+def create_llm(model: str = None, temperature: float = None):
+    """根据模型名自动选择 OpenAI 或 Anthropic 后端"""
+    m = model or DEEPSEEK_MODEL
+    if m and m.startswith("glm"):
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(
+            model=m,
+            api_key=ANTHROPIC_API_KEY,
+            base_url=ANTHROPIC_BASE_URL,
+            temperature=temperature or LLM_TEMPERATURE,
+            timeout=LLM_TIMEOUT,
+        )
+    else:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model=m,
+            api_key=DEEPSEEK_API_KEY,
+            base_url=DEEPSEEK_BASE_URL,
+            temperature=temperature or LLM_TEMPERATURE,
+            timeout=LLM_TIMEOUT,
+            max_retries=LLM_MAX_RETRIES,
+        )
+
+
+# API 超时 & 重试
 
 # API 超时 & 重试
 LLM_TIMEOUT = 60  # 单次请求超时（秒）

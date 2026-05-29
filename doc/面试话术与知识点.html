@@ -179,7 +179,28 @@ blockquote{border-left:3px solid rgba(0,180,255,.2);padding:8px 14px;margin:8px 
 </table>
 </div>
 
-<h2>四、简历上的描述</h2>
+<h2>四、面试官追问·进阶应对</h2>
+
+<div class="card">
+<p><strong>Q: 为什么选 LangGraph 而不是用现成的 Agent 框架比如 AutoGen、CrewAI？</strong></p>
+<blockquote>
+"AutoGen 和 CrewAI 确实开箱即用，但它们抽象层次较高，定制路由逻辑反而更麻烦。LangGraph 给的是 StateGraph 这个底层抽象——节点和边都由我自己控制，灵活性最高。而且我项目里已经用了 LangChain，LangGraph 是同一生态，不用引入额外依赖。"
+</blockquote>
+<p><strong>Q: 你怎么评估 Agent 的回答质量？</strong></p>
+<blockquote>
+"定量上我做了两件事：一是 Debate 机制的投票分布可以看出 Agent 之间的一致性；二是每个 tool call 的响应时间作为性能指标。定性上主要是场景验收——比如通风条件判断，换不同仓房、不同天气条件看结论是否符合常识。如果有生产环境，可以做人工抽检标注。"
+</blockquote>
+<p><strong>Q: 这个项目如果放到生产环境，你觉得最大的挑战是什么？</strong></p>
+<blockquote>
+"三个挑战：第一是 LLM 的延迟和成本，模拟环境无所谓，生产环境一天几百次调用就需要做缓存、降级、甚至本地小模型兜底。第二是数据真实性问题，现在的 mock 数据换成真实传感器和 ERP 系统需要做适配层。第三是安全性——设备控制指令不能让 LLM 随意下发，需要审批流程和操作审计。"
+</blockquote>
+<p><strong>Q: 你在这个项目里具体负责了什么？</strong></p>
+<blockquote>
+"从零搭建了整个项目：架构设计、Agent 实现、编排器、工具开发、前端、RAG 知识库、记忆系统、辩论机制、可观测性全部是我一个人完成的。最花时间的是 LangGraph 状态机的调试和 GLM-5 混合模型适配——因为 Anthropic 协议的模型不兼容 OpenAI 的 function calling，需要写适配层用 ReAct 文本格式替代 function calling。另外 SSE 流式前端也是比较耗时的部分，要让前端逐条展示 thinking→tool_calls→conclusion 的完整链路。"
+</blockquote>
+</div>
+
+<h2>五、简历上的描述</h2>
 
 <div class="card">
 <blockquote>

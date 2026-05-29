@@ -7,6 +7,16 @@
 __pycache__/
 *.pyc
 *.pyo
+*.pyc
+
+# Data files
+*.db
+.tiktoken_cache/
+
+# Debug scripts
+debug_*.py
+test_*.py
+memory_backup.json
 
 # 数据库 / 向量存储
 .chroma_db/

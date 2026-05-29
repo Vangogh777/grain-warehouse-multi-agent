@@ -2,14 +2,14 @@
 import time
 import asyncio
 from typing import Optional
-from langchain.agents import AgentExecutor, create_openai_tools_agent
+from langchain.agents import AgentExecutor, create_openai_tools_agent, create_react_agent
 from langchain.tools import BaseTool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
 from langchain_openai import ChatOpenAI
 from src.config import (
     DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL,
     LLM_TEMPERATURE, LLM_TIMEOUT, LLM_MAX_RETRIES, CUSTOM_GET_TOKEN_IDS,
-    REASONING_MODELS, MODEL_CONFIGS, TOOL_MODEL_MAP,
+    REASONING_MODELS, MODEL_CONFIGS, TOOL_MODEL_MAP, create_llm,
 )
 
 
@@ -34,15 +34,7 @@ class BaseGrainAgent:
         self._system_prompt = system_prompt
         self._max_iterations = max_iterations
 
-        self.llm = llm or ChatOpenAI(
-            model=self._current_model,
-            api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL,
-            temperature=LLM_TEMPERATURE,
-            timeout=LLM_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
-            custom_get_token_ids=CUSTOM_GET_TOKEN_IDS,
-        )
+        self.llm = llm or create_llm(model=self._current_model)
 
         self._rebuild_executor()
 
@@ -56,29 +48,26 @@ class BaseGrainAgent:
 
     def _rebuild_executor(self):
         """重建 LLM 和 AgentExecutor（推理模型走纯文本路径）"""
-        api_cfg = self._get_model_api_config(self._current_model)
-        self.llm = ChatOpenAI(
-            model=self._current_model,
-            api_key=api_cfg["api_key"],
-            base_url=api_cfg["base_url"],
-            temperature=LLM_TEMPERATURE,
-            timeout=LLM_TIMEOUT,
-            max_retries=LLM_MAX_RETRIES,
-            custom_get_token_ids=CUSTOM_GET_TOKEN_IDS,
-        )
+        self.llm = create_llm(model=self._current_model)
         self._is_reasoning = self._current_model in REASONING_MODELS
 
         if self._is_reasoning:
             # 推理模型：executor 用不上，工具调用在 run() 里手动处理
             self.executor = None
         else:
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "你是 {name}。\n\n{system_prompt}"),
-                MessagesPlaceholder(variable_name="chat_history", optional=True),
-                ("human", "{input}"),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
-            ])
-            agent = create_openai_tools_agent(self.llm, self.tools, prompt)
+            if self._current_model and self._current_model.startswith("glm"):
+                # GLM-5（Anthropic 协议）：使用 ReAct 文本格式
+                template = """你是 {name}。\n\n{system_prompt}\n\n工具:\n{tools}\n工具名: {tool_names}\n\n按格式:\n思考: ...\n行动: 工具名\n行动输入: 参数\n观察: ...\n最终答案: ...\n\n用户: {input}\n\n{agent_scratchpad}"""
+                prompt = PromptTemplate(template=template, input_variables=["input","agent_scratchpad"])
+                agent = create_react_agent(self.llm, self.tools, prompt)
+            else:
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", "你是 {name}。\n\n{system_prompt}"),
+                    MessagesPlaceholder(variable_name="chat_history", optional=True),
+                    ("human", "{input}"),
+                    MessagesPlaceholder(variable_name="agent_scratchpad"),
+                ])
+                agent = create_openai_tools_agent(self.llm, self.tools, prompt)
             self.executor = AgentExecutor(
                 agent=agent,
                 tools=self.tools,
@@ -113,23 +102,20 @@ class BaseGrainAgent:
                     tool_calls = []
 
                     if tool_model:
-                        # 创建快模型 (DeepSeek V3) 执行工具调用
-                        tool_api_cfg = self._get_model_api_config(tool_model)
-                        tool_llm = ChatOpenAI(
-                            model=tool_model,
-                            api_key=tool_api_cfg["api_key"] or DEEPSEEK_API_KEY,
-                            base_url=tool_api_cfg["base_url"] or DEEPSEEK_BASE_URL,
-                            temperature=LLM_TEMPERATURE, timeout=LLM_TIMEOUT,
-                            max_retries=LLM_MAX_RETRIES,
-                            custom_get_token_ids=CUSTOM_GET_TOKEN_IDS,
-                        )
-                        tool_prompt = ChatPromptTemplate.from_messages([
-                            ("system", f"你是 {self.name}。\n\n{self._system_prompt}\n{system_prompt_extra}\n请调用工具获取数据，不要分析。"),
-                            MessagesPlaceholder(variable_name="chat_history", optional=True),
-                            ("human", "{input}"),
-                            MessagesPlaceholder(variable_name="agent_scratchpad"),
-                        ])
-                        tool_agent = create_openai_tools_agent(tool_llm, self.tools, tool_prompt)
+                        tool_llm = create_llm(model=tool_model)
+                        is_glm = tool_model and tool_model.startswith("glm")
+                        if is_glm:
+                            tool_template = """你是 {name}。\n\n{tool_extra}\n调用工具获取数据，不要分析。\n\n工具:\n{tools}\n工具名: {tool_names}\n\n按格式:\n思考: ...\n行动: 工具名\n行动输入: 参数\n观察: ...\n最终答案: ...\n\n用户: {input}\n\n{agent_scratchpad}"""
+                            tool_prompt = PromptTemplate(template=tool_template, input_variables=["input","agent_scratchpad"],
+                                partial_variables={"name":self.name,"tool_extra":self._system_prompt+"\n"+system_prompt_extra})
+                        else:
+                            tool_prompt = ChatPromptTemplate.from_messages([
+                                ("system", f"你是 {self.name}。\n\n{self._system_prompt}\n{system_prompt_extra}\n请调用工具获取数据，不要分析。"),
+                                MessagesPlaceholder(variable_name="chat_history", optional=True),
+                                ("human", "{input}"),
+                                MessagesPlaceholder(variable_name="agent_scratchpad"),
+                            ])
+                        tool_agent = create_react_agent(tool_llm, self.tools, tool_prompt) if is_glm else create_openai_tools_agent(tool_llm, self.tools, tool_prompt)
                         tool_executor = AgentExecutor(
                             agent=tool_agent, tools=self.tools, verbose=False,
                             max_iterations=self._max_iterations,
