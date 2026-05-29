@@ -25,7 +25,7 @@
 | `tests/` | Empty (`__init__.py` only) |
 
 ## Commands
-- **API server:** `uvicorn src.api.server:app --reload --port 8000`
+- **API server:** `uvicorn src.api.server:app --reload --port 8080`
 - **CLI demo:** `python src/main.py`
 
 ## Conventions

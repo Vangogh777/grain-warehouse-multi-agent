@@ -194,7 +194,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <script src="https://cdn.bootcdn.net/ajax/libs/marked/11.0.0/marked.min.js"></script>
 <script>
 // ========== Config ==========
-const API_HOST = (window.location.origin === 'null' || window.location.protocol === 'file:') ? 'http://localhost:8000' : window.location.origin;
+const API_HOST = (window.location.origin === 'null' || window.location.protocol === 'file:') ? 'http://localhost:8080' : window.location.origin;
 const API_BASE = API_HOST + '/api';
 const API_URL = API_BASE + '/query';
 const API_STREAM = API_BASE + '/query/stream';

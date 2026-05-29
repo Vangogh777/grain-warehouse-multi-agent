@@ -102,7 +102,7 @@ cp .env.example .env
 ### 3. 启动后端
 
 ```bash
-python -X utf8 -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000
+python -X utf8 -m uvicorn src.api.server:app --host 0.0.0.0 --port 8080
 ```
 
 ### 4. 打开前端
