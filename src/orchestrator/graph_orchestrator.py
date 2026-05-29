@@ -121,37 +121,71 @@ def build_graph(agents: dict[str, BaseGrainAgent]) -> StateGraph:
 
     # ---- 通用聚合节点 ----
     async def aggregator_node(state: AgentState) -> dict:
-        """聚合所有 Agent 结果"""
+        """聚合所有 Agent 结果（支持多 Agent 并行执行）"""
+        results = dict(state.get("results", {}))
+        scenario = state.get("scenario", "general")
+        all_tool_calls = []
+        rid = state["request_id"]
+
+        # 通风场景：粮情分析完成后，并行执行智能作业
+        if scenario == "ventilation" and "智能作业" in agents and "智能作业" not in results:
+            op_agent = agents["智能作业"]
+            op_agent.request_id = rid
+            sid_hint = "S-07"
+            op_task = f"请查询仓房 {sid_hint} 当前天气、电价、设备状态，判断是否适合通风作业。"
+            op_result = await op_agent.run(op_task)
+            results["智能作业"] = op_result
+
+        # 报表场景：粮情分析完成后，并行执行报表
+        if scenario == "report" and "报表分析" in agents and "报表分析" not in results:
+            rpt_agent = agents["报表分析"]
+            rpt_agent.request_id = rid
+            rpt_result = await rpt_agent.run(state["query"])
+            results["报表分析"] = rpt_result
+
+        # 合并所有 tool_calls
+        for aname, aresult in results.items():
+            all_tool_calls.extend(aresult.get("tool_calls", []))
+
+        # 构建聚合结果
         parts = []
-        for aname, aresult in state.get("results", {}).items():
+        for aname, aresult in results.items():
             status = "✅" if aresult.get("success") else "❌"
             tc = len(aresult.get("tool_calls", []))
             output = aresult.get("output", "")
             parts.append(f"【{aname}】{status} (工具调用 {tc}次)\n{output[:500]}")
 
         combined = "\n\n".join(parts)
-        if len(state.get("results", {})) > 1:
-            # 多 Agent 时让主 Agent 聚合
-            main_agent_name = list(agents.keys())[0]
-            main_agent = agents[main_agent_name]
-            main_agent.request_id = state["request_id"]
+        agents_used = list(results.keys())
+
+        if len(results) > 1:
+            main_name = list(agents.keys())[0]
+            main_agent = agents[main_name]
+            main_agent.request_id = rid
             agg_task = f"用户问题：{state['query']}\n\n各 Agent 分析：\n{combined}\n\n请综合以上信息给出完整回答。"
             agg_result = await main_agent.run(agg_task)
-            return {"final_answer": agg_result.get("output", combined)}
+            return {
+                "final_answer": agg_result.get("output", combined),
+                "tool_calls": all_tool_calls,
+                "agents_used": agents_used,
+                "results": results,
+            }
         else:
-            return {"final_answer": combined}
+            return {
+                "final_answer": combined,
+                "tool_calls": all_tool_calls,
+                "agents_used": agents_used,
+                "results": results,
+            }
 
     graph.add_node("aggregator", aggregator_node)
 
     # ---- 边：路由 ----
     def route_from_router(state: AgentState) -> str:
         scenario = state.get("scenario", "general")
+        # 多 Agent 场景先走第一个，后续在 aggregator 中并行执行其余
         if scenario == "ventilation":
-            # 通风场景需要粮情分析 + 智能作业
-            # LangGraph 0.2.x 不支持多目标并行，走先粮情再作业
-            if "粮情分析" in agents:
-                return "粮情分析"
-            return list(agents.keys())[0]
+            return "粮情分析" if "粮情分析" in agents else list(agents.keys())[0]
         if scenario == "grain_analysis":
             return "粮情分析" if "粮情分析" in agents else list(agents.keys())[0]
         if scenario == "inoutbound":

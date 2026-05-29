@@ -176,8 +176,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 <script src="https://cdn.bootcdn.net/ajax/libs/marked/11.0.0/marked.min.js"></script>
 <script>
 // ========== Config ==========
-const API_URL = 'http://localhost:8000/api/query';
-const API_STREAM = 'http://localhost:8000/api/query/stream';
+const API_BASE = window.location.origin + '/api';
+const API_URL = API_BASE + '/query';
+const API_STREAM = API_BASE + '/query/stream';
 
 // ========== Theme Toggle ==========
 (function(){
@@ -734,7 +735,7 @@ function drawDAG(nodes,container){
 }
 
 // Check backend health
-fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'ping'})})
+fetch(API_URL.replace('/api/query','/api/silos'))
   .then(r=>r.ok?apiStatus.textContent='后端已连接 ✅':apiStatus.textContent='后端异常')
   .catch(()=>apiStatus.textContent='后端未连接 ❌');
 </script>
