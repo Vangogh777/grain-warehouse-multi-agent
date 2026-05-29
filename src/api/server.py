@@ -19,6 +19,9 @@ from src.agents.quality import create_quality_agent
 from src.orchestrator.graph_orchestrator import LangGraphOrchestrator
 from src.orchestrator.debate import DebateOrchestrator
 
+import os as _os
+_root = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 app = FastAPI(title="粮库多智能体系统 API", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
@@ -70,15 +73,6 @@ async def startup():
 async def root():
     return {"service": "粮库多智能体系统", "status": "running",
             "agents": ["粮情分析", "智能作业", "出入库", "报表分析", "质量检测"]}
-
-
-# 托管前端静态文件（通过 http://localhost:8000 访问）
-import os as _os
-_frontend_dir = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "..")
-@app.get("/index.html")
-@app.get("/dashboard.html")
-async def serve_frontend(file: str = "index.html"):
-    return FileResponse(_os.path.join(_frontend_dir, file))
 
 
 @app.post("/api/query", response_model=QueryResponse)
@@ -184,3 +178,7 @@ async def get_sessions():
     from src.tools.memory import get_all_sessions
     sessions = get_all_sessions()
     return {"sessions": sessions}
+
+
+# 静态文件托管（放在最后，避免拦截 API 路由）
+app.mount("/", StaticFiles(directory=_root, html=True), name="static")
