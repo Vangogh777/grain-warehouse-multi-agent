@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><title>推理模型加速方案</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1a2e;color:#dce6f0;font-family:'Segoe UI','PingFang SC',sans-serif;padding:30px 40px;max-width:900px;margin:0 auto;line-height:1.8}
+h1{font-size:24px;margin-bottom:6px;background:linear-gradient(135deg,#40c8ff,#40ffa0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:18px;margin:24px 0 10px;color:#e0ecff;border-left:3px solid #40c8ff;padding-left:10px}
+h3{font-size:15px;margin:16px 0 6px;color:#40c8ff}
+.card{background:rgba(20,35,60,.5);border:1px solid rgba(0,180,255,.08);border-radius:10px;padding:16px 20px;margin:10px 0}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th,.card td{padding:6px 10px;border:1px solid rgba(0,180,255,.06);text-align:left}
+.card th{background:rgba(0,180,255,.06);color:#40c8ff}
+.card td{background:rgba(0,180,255,.02)}
+code{background:rgba(0,180,255,.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#40c8ff}
+pre{background:rgba(0,0,0,.3);border:1px solid rgba(0,180,255,.06);border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:12px;line-height:1.5}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;font-size:12px}
+.flow span{padding:4px 10px;border-radius:4px;background:rgba(0,180,255,.08)}
+.flow .arr{background:transparent;color:rgba(200,214,229,.3)}
+.tag.g{background:rgba(0,255,136,.12);color:#40ffa0}
+.tag.b{background:rgba(0,180,255,.12);color:#40c8ff}
+.tag.o{background:rgba(255,165,0,.12);color:#ffa500}
+</style>
+</head>
+<body>
+
+<h1>🚀 GLM-5 加速方案</h1>
+
+<h2>一、现状</h2>
+<div class="card">
+<p>当前 GLM-5 单次推理耗时分布：</p>
+<pre>
+用户提问
+  │
+  ▼ 第1轮 (12s) → GLM-5 思考 → TOOL_CALL: get_sensor_data(S-07)
+  │                 执行工具 (0s)
+  ▼ 第2轮 (12s) → GLM-5 思考 → TOOL_CALL: get_weather()
+  │                 执行工具 (0s)
+  ▼ 第3轮 (12s) → GLM-5 思考 → TOOL_CALL: check_device()
+  │                 执行工具 (0s)
+  ▼ 第4轮 (12s) → GLM-5 思考 → FINAL: 结论
+  │
+  总计: ~48s（4次LLM调用）
+</pre>
+<p><strong>瓶颈：</strong> 推理模型每轮都要重新思考，4轮就是48秒。而工具执行本身是毫秒级的。</p>
+</div>
+
+<h2>二、优化方案</h2>
+
+<h3>方案 A：工具自动推断 + 并行执行（最快，半小时实现）</h3>
+<div class="card">
+<p>不再让 LLM 决定调什么工具，而是根据场景规则自动推断并并行执行所有工具，最后只让 GLM-5 做一次分析。</p>
+
+<div class="flow">
+<span>用户提问</span>
+<span class="arr">→</span>
+<span>场景检测</span>
+<span class="arr">→</span>
+<span style="background:rgba(0,255,136,.15);color:#40ffa0">自动推断工具列表</span>
+<span class="arr">→</span>
+<span style="background:rgba(0,255,136,.15);color:#40ffa0">并行执行全部工具</span>
+<span class="arr">→</span>
+<span>GLM-5 只做分析（1轮）</span>
+<span class="arr">→</span>
+<span>结论</span>
+</div>
+
+<pre>
+# base_agent.py 自动工具注入逻辑
+TOOL_MAP = {
+    "ventilation": ["get_sensor_data", "get_silo_info", "get_weather", 
+                     "check_device_status", "get_electricity_price"],
+    "grain_analysis": ["get_sensor_data", "get_silo_info"],
+    "inoutbound": ["query_today_inbounds", "query_today_outbounds"],
+    "quality": ["query_sample_records", "query_quality_alerts"],
+    "report": ["query_inventory", "analyze_anomaly_silos"],
+}
+
+def auto_execute_tools(scenario, silo_id=None):
+    """自动执行场景所需工具，不经过 LLM 决策"""
+    tool_names = TOOL_MAP.get(scenario, [])
+    results = {}
+    for name in tool_names:
+        tool = find_tool(name)
+        params = {"silo_id": silo_id} if silo_id else {}
+        results[name] = tool._run(**params)
+    return results
+</pre>
+
+<table>
+<tr><th>对比</th><th>当前</th><th>方案 A</th></tr>
+<tr><td>LLM 调用次数</td><td>3~4 轮</td><td><strong>1 轮</strong></td></tr>
+<tr><td>总耗时</td><td>~48s</td><td><strong>~15s</strong>（1次推理）</td></tr>
+<tr><td>工具执行</td><td>串行，每轮等 LLM</td><td>并行，毫秒级</td></tr>
+</table>
+
+<p><span class="tag g">优点</span> 简单可靠，耗时降 70%</p>
+<p><span class="tag o">缺点</span> 工具调用是固定规则，不灵活</p>
+</div>
+
+<h3>方案 B：一次性输出全部工具调用（稍灵活，1天）</h3>
+<div class="card">
+<p>修改 prompt，让 GLM-5 在一次回复里输出所有需要的工具，然后我们并行执行。</p>
+
+<pre>
+当前 prompt:
+  思考 → TOOL_CALL: xxx → 结果 → 思考 → TOOL_CALL: yyy → 结果 → FINAL
+
+优化后的 prompt:
+  请分析需要哪些工具，一次性输出所有 TOOL_CALL，用 --- 分隔。
+  然后我把所有结果给你，你再做分析。
+  
+  输出格式：
+  TOOL_CALL: get_sensor_data(S-07)
+  TOOL_CALL: get_weather()
+  TOOL_CALL: check_device_status(S-07)
+  ---
+  [等待工具结果...]
+  ---
+  FINAL: 基于以上数据，分析结论...
+</pre>
+
+<div class="flow">
+<span>一轮 LLM 调用</span>
+<span class="arr">→</span>
+<span>GLM-5 输出 N 个 TOOL_CALL</span>
+<span class="arr">→</span>
+<span style="background:rgba(0,255,136,.15);color:#40ffa0">并行执行 N 个工具</span>
+<span class="arr">→</span>
+<span>再一轮 LLM 调用分析</span>
+<span class="arr">→</span>
+<span>结论</span>
+</div>
+
+<table>
+<tr><th>对比</th><th>当前</th><th>方案 B</th></tr>
+<tr><td>LLM 调用次数</td><td>3~4 轮</td><td><strong>2 轮</strong></td></tr>
+<tr><td>总耗时</td><td>~48s</td><td><strong>~25s</strong></td></tr>
+</table>
+
+<p><span class="tag g">优点</span> 保留 LLM 决策灵活性</p>
+<p><span class="tag o">缺点</span> 推理模型可能不按格式输出，实现稍复杂</p>
+</div>
+
+<h3>方案 C：双模型混合（最理想，需额外模型 API）</h3>
+<div class="card">
+<p>工具调用用快模型（非推理），深度分析用 GLM-5。这是最好的方案，但需要一个额外的非推理模型 API。</p>
+
+<div class="flow">
+<span>用户提问</span>
+<span class="arr">→</span>
+<span style="background:#ffa50022;color:#ffa500">快模型（如 Qwen2.5）</span>
+<span class="arr">→</span>
+<span>调工具、收集数据</span>
+<span class="arr">→</span>
+<span style="background:rgba(0,255,136,.15);color:#40ffa0">GLM-5 深度分析</span>
+<span class="arr">→</span>
+<span>结论</span>
+</div>
+
+<p>如果你能找到另一个非推理模型的 API（比如本地 Ollama 跑 Qwen2.5），用这个方案效果最好：</p>
+<ul style="padding-left:20px;font-size:13px">
+  <li>快模型：5 秒内完成工具调用 + 数据收集 - ✅</li>
+  <li>GLM-5：15 秒深度分析 - ✅</li>
+  <li>总耗时：~20 秒，比现在的 48 秒快一倍多 - ✅</li>
+</ul>
+</div>
+
+<h2>三、推荐实施顺序</h2>
+
+<div class="card">
+<table>
+<tr><th>优先级</th><th>方案</th><th>时间</th><th>预期效果</th></tr>
+<tr><td><span class="tag g">P0</span></td><td>方案 A：自动工具推断 + 并行执行</td><td>30 分钟</td><td>48s → ~15s</td></tr>
+<tr><td><span class="tag b">P1</span></td><td>方案 B：一次性输出全部工具</td><td>1 小时</td><td>48s → ~25s</td></tr>
+<tr><td><span class="tag o">P2</span></td><td>方案 C：双模型混合</td><td>取决于获取新模型 API</td><td>48s → ~20s</td></tr>
+</table>
+<p><strong>建议：</strong>先做方案 A，30 分钟见效，从 48 秒降到 15 秒左右。后续有精力再做 B 或 C。</p>
+</div>
+
+</body>
+</html>

@@ -21,6 +21,29 @@ AVAILABLE_MODELS = {
     "deepseek-chat": "DeepSeek V3（快速）",
     "deepseek-v4-flash": "DeepSeek V4 Flash（推理）",
     "deepseek-v4-pro": "DeepSeek V4 Pro（最强）",
+    "glm-5": "GLM-5（智谱）",
+}
+
+# 各模型专属配置（API Key / Base URL 覆盖默认值）
+MODEL_CONFIGS = {
+    "glm-5": {
+        "api_key": os.getenv("GLM5_API_KEY", ""),
+        "base_url": os.getenv("GLM5_BASE_URL", "https://aicoding.bwits.cn:90/v1"),
+    },
+    "deepseek-ai/DeepSeek-V2.5": {
+        "api_key": os.getenv("SILICONFLOW_API_KEY", ""),
+        "base_url": os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
+    },
+}
+
+# 推理模型列表（不支持工具调用）
+REASONING_MODELS = {"deepseek-v4-flash", "deepseek-v4-pro", "glm-5"}
+
+# 推理模型对应的工具调用模型（快模型，非推理）
+TOOL_MODEL_MAP = {
+    "glm-5": "deepseek-chat",        # GLM-5 分析，DeepSeek V3 调工具
+    "deepseek-v4-flash": "deepseek-chat",
+    "deepseek-v4-pro": "deepseek-chat",
 }
 
 # LLM 温度

@@ -207,6 +207,8 @@ class LangGraphOrchestrator:
         role_info = ROLES.get(role, ROLES["keeper"])
         memory_context = format_history(session_id, MEMORY_MAX_EXCHANGES, query=query)
         role_prefix = f"【当前角色：{role_info['icon']} {role_info['label']}】\n{role_info['prompt']}"
+        if model:
+            role_prefix += f"\n【当前模型：{model}】"
         if memory_context:
             role_prefix += f"\n\n{memory_context}"
         enhanced_query = f"{role_prefix}\n\n用户问题：{query}"
@@ -295,6 +297,8 @@ class LangGraphOrchestrator:
 
         # 构造增强查询
         role_prefix = f"【当前角色：{role_info['icon']} {role_info['label']}】\n{role_info['prompt']}"
+        if model:
+            role_prefix += f"\n【当前模型：{model}】"
         if memory_context:
             role_prefix += f"\n\n{memory_context}"
         enhanced_query = f"{role_prefix}\n\n用户问题：{query}"

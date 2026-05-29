@@ -11,6 +11,14 @@ import sqlite3
 _DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".trace.db")
 
 
+def _migrate_add_column(conn, table, column, col_type):
+    """安全添加列（如果不存在）"""
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+    except Exception:
+        pass  # 列已存在
+
+
 def _get_db() -> sqlite3.Connection:
     conn = sqlite3.connect(_DB_PATH)
     conn.execute("""
@@ -20,9 +28,9 @@ def _get_db() -> sqlite3.Connection:
             trace_type TEXT NOT NULL,
             agent_name TEXT,
             tool_name TEXT,
-            tool_input TEXT,
-            tool_output TEXT,
-            depends_on TEXT,
+            tool_input TEXT DEFAULT '',
+            tool_output TEXT DEFAULT '',
+            depends_on TEXT DEFAULT '',
             input_tokens INTEGER DEFAULT 0,
             output_tokens INTEGER DEFAULT 0,
             duration_ms INTEGER DEFAULT 0,
@@ -31,6 +39,10 @@ def _get_db() -> sqlite3.Connection:
             created_at TEXT DEFAULT (datetime('now','localtime'))
         )
     """)
+    # 迁移：给旧表加缺失的列
+    _migrate_add_column(conn, "traces", "tool_input", "TEXT DEFAULT ''")
+    _migrate_add_column(conn, "traces", "tool_output", "TEXT DEFAULT ''")
+    _migrate_add_column(conn, "traces", "depends_on", "TEXT DEFAULT ''")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

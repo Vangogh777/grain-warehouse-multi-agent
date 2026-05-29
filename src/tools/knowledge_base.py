@@ -1,27 +1,19 @@
-"""RAG 知识库 — ChromaDB + 文档分块 + Hybrid Search"""
+"""RAG 知识库 — BM25 关键词检索（无需 embedding API）"""
 
 import os
 import glob
 from typing import Optional
 
-# ChromaDB + LangChain 集成
-from langchain_chroma import Chroma
-from langchain_openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
-# BM25 关键词检索（与向量检索融合）
+# BM25 关键词检索（无需 embedding）
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
 
 # ---------- 配置 ----------
 RAG_DOCS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "rag_docs")
-CHROMA_PERSIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".chroma_db")
 
-# embedding — 复用 DeepSeek API（OpenAI 兼容接口）
-from src.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL
-
-_retriever: Optional[EnsembleRetriever] = None
+_retriever: Optional[BM25Retriever] = None
 
 
 def _load_docs() -> list[Document]:
@@ -48,33 +40,15 @@ def _split_docs(docs: list[Document]) -> list[Document]:
     return splitter.split_documents(docs)
 
 
-def _build_retriever() -> EnsembleRetriever:
-    """构建 Hybrid Search 检索器（向量 + BM25）"""
+def _build_retriever() -> BM25Retriever:
+    """构建 BM25 关键词检索器（无需 embedding API）"""
     docs = _load_docs()
     chunks = _split_docs(docs)
 
-    # 向量检索
-    embeddings = OpenAIEmbeddings(
-        model="text-embedding-3-small",
-        api_key=DEEPSEEK_API_KEY,
-        base_url=DEEPSEEK_BASE_URL,
-    )
-    vectordb = Chroma.from_documents(
-        documents=chunks,
-        embedding=embeddings,
-        persist_directory=CHROMA_PERSIST_DIR,
-    )
-    vector_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
-
     # BM25 关键词检索
-    bm25_retriever = BM25Retriever.from_documents(chunks)
-    bm25_retriever.k = 3
-
-    # 融合（各 0.5 权重）
-    return EnsembleRetriever(
-        retrievers=[vector_retriever, bm25_retriever],
-        weights=[0.5, 0.5],
-    )
+    retriever = BM25Retriever.from_documents(chunks)
+    retriever.k = 3
+    return retriever
 
 
 def ensure_retriever():
